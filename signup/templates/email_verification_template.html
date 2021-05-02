@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      #box {
+        background-color: #2D2D2D;
+        padding-bottom: 60px;
+        padding-right: 60px;
+        padding-left: 60px;
+
+        margin-left: auto;
+        margin-right: auto;
+
+
+        border-radius: 40px;
+        max-width: 700px;
+        min-width: 700px;
+      }
+
+      #main {
+        margin-left: auto;
+        margin-right: auto;
+        padding-top: 100px;
+        padding-bottom: 100px;
+      }
+
+      #button {
+        background-color: #FFC300;
+        padding: 1px;
+        padding-left: 60px;
+        padding-right: 60px;
+        border-radius: 80px;
+
+      }
+
+
+      #text {
+        text-align: center;
+        line-height: 50px;
+        color: #444444;
+        font-size: 25px;
+      }
+
+    </style>
+  </head>
+	<body style="background-color: #3a3a3a;">
+
+    <div id="main">
+      <div id="box" >
+        <div style="margin-left: auto; margin-right: auto; border-radius: 5px; align-items: center; background-color: #2D2D2D; width: 400px; ">
+          <img style="width: 400px;" src="https://client1.sweilem.uk/wp-content/uploads/2019/02/weblogo-1.png" />
+        </div>
+        <p id="text" style="color: white;">
+          Dear {{ name }},
+        </p>
+        <p id="text" style="color: white;">
+          An attempt to activate a David Corfield membership has been made using this email address.
+        </p>
+        <p id="text" style="color: white;">
+          If this is correct press the "activate account" button below to activate your account.
+        </p>
+        <a style="text-decoration: none;" href="{{ link }}">
+          <div style="margin-top: 55px" id="button">
+              <p style="text-align: center; color: black; font-weight: bold; font-size: 30px;">
+                Active Account
+              </p>
+          </div>
+        </a>
+      </div>
+    </div>
+  </body>
+</html>

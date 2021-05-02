@@ -3,7 +3,7 @@ from django.contrib.auth.base_user import BaseUserManager
 from django.contrib.auth.models import AbstractUser
 from django.utils.translation import ugettext_lazy as _
 # Create your models here.
-
+from django.contrib import admin
 
 class CustomUserManager(BaseUserManager):
     """
@@ -48,3 +48,7 @@ class CustomUser(AbstractUser):
 
     def __str__(self):
         return self.email
+
+
+class CustomUserAdmin(admin.ModelAdmin):
+    list_display = ('first_name', 'last_name', 'colored_name')
