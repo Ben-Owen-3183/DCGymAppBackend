@@ -1,5 +1,5 @@
 # DJANGO
-from django.http import HttpResponse, JsonResponse
+from django.http import HttpResponse, JsonResponse, Http404
 from django.views import View
 from django.core.validators import EmailValidator
 from django.core.mail import BadHeaderError, send_mail, EmailMultiAlternatives
@@ -8,11 +8,11 @@ from django.utils.html import strip_tags
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from django.conf import settings
-from django.http import Http404
 
 # DJANGO REST
 from rest_framework.response import Response
 from rest_framework.views import APIView
+from rest_framework.permissions import AllowAny
 
 # STANDARD LIBRARY
 import json
@@ -25,6 +25,8 @@ from signup.models import PotentialUser
 from login.models import CustomUser
 
 class signup(APIView):
+    permission_classes = [AllowAny]
+
     """
     Validate names
     """
@@ -124,7 +126,15 @@ class signup(APIView):
         # validate passwords
         errors = self.validate_passwords(errors, request.data)
 
+        #remove spaces from name
+        request.data['fName'] = request.data['fName'].strip(' ')
+        request.data['sName'] = request.data['sName'].strip(' ')
+
         errors = self.validate_names(errors, request.data)
+
+        # remove spaces from email
+        request.data['email'] = request.data['email'].strip(' ')
+        request.data['emailConf'] = request.data['emailConf'].strip(' ')
         errors = self.validate_email(errors, request.data)
 
 
@@ -165,7 +175,7 @@ class signup(APIView):
 
 
 class verifyemail(View):
-
+    permission_classes = [AllowAny]
 
     def str_to_date(self, str_date):
         date_split = str.split(str_date, '-')
@@ -176,9 +186,6 @@ class verifyemail(View):
 
 
     def get(self, request, token, id):
-
-        print(id)
-        print(token)
         new_user = None
         try:
             new_user = PotentialUser.objects.get(id=id, v_token=token)

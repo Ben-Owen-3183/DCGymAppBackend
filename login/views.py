@@ -1,9 +1,11 @@
 from rest_framework.authtoken.views import ObtainAuthToken
 from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
-
+from rest_framework.permissions import AllowAny
 
 class login(ObtainAuthToken):
+    permission_classes = [AllowAny]
+
     def post(self, request, *args, **kwargs):
         print(request.data)
         serializer = self.serializer_class(data=request.data,
@@ -14,5 +16,7 @@ class login(ObtainAuthToken):
         return Response({
             'token': token.key,
             'user_id': user.pk,
-            'email': user.email
+            'email': user.email,
+            'first_name': user.first_name,
+            'last_name': user.last_name,
         })
