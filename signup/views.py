@@ -116,10 +116,6 @@ class signup(APIView):
             print('Invalid header found.')
 
 
-    def hello(self):
-        print('hello')
-
-
     def post(self, request, *args, **kwargs):
         # print(request.data)
         errors = {'name': [], 'email': [], 'password': []}
@@ -166,7 +162,6 @@ class signup(APIView):
                     From there, follow the signup instructions.
                 """
                 )
-        # validate emails
         return JsonResponse({
             'errors': errors
         })
@@ -195,7 +190,6 @@ class verifyemail(View):
             return HttpResponse({"This signup token has already been used."})
         new_user.locked = True
         new_user.save()
-        print(new_user.timestamp)
         current_date = self.str_to_date(date.isoformat(date.today()))
         diff = (current_date - new_user.timestamp).days
         if diff > 7:
