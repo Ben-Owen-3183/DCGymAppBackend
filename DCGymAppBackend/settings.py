@@ -65,6 +65,8 @@ INSTALLED_APPS = [
     'login',
     'signup',
     'user_account',
+    'messenger',
+    'channels',
 ]
 
 
@@ -97,7 +99,16 @@ TEMPLATES = [
     },
 ]
 
-WSGI_APPLICATION = 'DCGymAppBackend.wsgi.application'
+ASGI_APPLICATION = "DCGymAppBackend.asgi.application"
+CHANNEL_LAYERS = {
+    'default': {
+        'BACKEND': 'channels_redis.core.RedisChannelLayer',
+        'CONFIG': {
+            "hosts": [('127.0.0.1', 6379)],
+        },
+    },
+}
+# WSGI_APPLICATION = 'DCGymAppBackend.wsgi.application'
 
 
 # Database

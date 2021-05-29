@@ -15,12 +15,48 @@ from django.core.mail import BadHeaderError, send_mail, EmailMultiAlternatives
 from django.http import HttpResponse
 from django.views import View
 from django.template.loader import render_to_string
+from django.contrib.postgres.search import TrigramSimilarity
+
+
+
+from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
+
 
 class UserAccount(APIView):
     """
     Validate names
     """
 
+
+class UserSearch(APIView):
+    permission_classes = [AllowAny]
+
+    def getUserAvatar(self, user_id):
+        try:
+            userAvatar = UserAvatar.objects.get(user=user_id)
+            return userAvatar.image_name
+        except:
+            pass
+        return ''
+
+    def post(self, request):
+        name = request.data['text']
+
+        results = CustomUser.objects.annotate(
+            similarity=TrigramSimilarity('first_name', name) + TrigramSimilarity('last_name', name),
+        ).filter(similarity__gt=0.2).order_by('-similarity')[:20]
+
+        response = []
+        for user in results:
+            response.append({
+                'id': user.id,
+                'fName': user.first_name,
+                'sName': user.last_name,
+                'isSuperUser': user.is_superuser,
+                'isStaff': user.is_staff,
+                'avatarURL': self.getUserAvatar(user.id)
+            })
+        return Response(response)
 
 
 class PassChange(APIView):
