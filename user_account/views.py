@@ -16,10 +16,20 @@ from django.http import HttpResponse
 from django.views import View
 from django.template.loader import render_to_string
 from django.contrib.postgres.search import TrigramSimilarity
-
-
-
 from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
+
+
+# Generic Functions
+
+def getUserAvatar(user_id):
+    try:
+        userAvatar = UserAvatar.objects.get(user=user_id)
+        return userAvatar.image_name
+    except:
+        pass
+    return ''
+
+
 
 
 class UserAccount(APIView):
@@ -28,16 +38,27 @@ class UserAccount(APIView):
     """
 
 
+class GetStaff(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        staff = CustomUser.objects.filter(is_staff=True).order_by('-is_superuser')
+        staff_list = []
+        for s in staff:
+            staff_list.append({
+                'id': s.id,
+                'fName': s.first_name,
+                'sName': s.last_name,
+                'isSuperUser': s.is_superuser,
+                'isStaff': s.is_staff,
+                'avatarURL': getUserAvatar(s.id)
+            })
+        return Response({'staff_list' : staff_list})
+
+
 class UserSearch(APIView):
     permission_classes = [AllowAny]
 
-    def getUserAvatar(self, user_id):
-        try:
-            userAvatar = UserAvatar.objects.get(user=user_id)
-            return userAvatar.image_name
-        except:
-            pass
-        return ''
 
     def post(self, request):
         name = request.data['text']
@@ -54,7 +75,7 @@ class UserSearch(APIView):
                 'sName': user.last_name,
                 'isSuperUser': user.is_superuser,
                 'isStaff': user.is_staff,
-                'avatarURL': self.getUserAvatar(user.id)
+                'avatarURL': getUserAvatar(user.id)
             })
         return Response(response)
 

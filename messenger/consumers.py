@@ -36,32 +36,46 @@ class MessengerConsumer(WebsocketConsumer):
             self.message(data, user_id)
         if action == 'new_chat':
             self.new_chat(data, user_id)
+        if action == 'add_new_chat':
+            self.add_new_chats(user_id)
         #except Exception as e:
         #    print(e)
 
 
-    def new_chat(self, data, user_id):
-                #try:
+    def add_new_chats(self, user_id):
+        try:
+            users_chats = ChatUser.objects.filter(user=user_id)
+            for chat in users_chats:
                 async_to_sync(self.channel_layer.group_add)(
-                    str(data['chat_id']),
+                    str(chat.subscribed_chat.id),
                     self.channel_name
                 )
+        except Exception as e:
+            print("error: " + str(e))
 
-                other_user_chat = ChatUser.objects.get(
-                    Q(subscribed_chat=data['chat_id'])
-                    & ~Q(user=user_id)
-                )
 
-                async_to_sync(self.channel_layer.group_send)(
-                    str(other_user_chat.user.id),
-                    {
-                        'type': 'chat_message',
-                        'message': 'new_chat',
-                        'chat_id': data['chat_id']
-                    }
-                )
-                #except Exception as e:
-                #    print("error: " + str(e))
+    """ Creates a new chat and adds the user"""
+    def new_chat(self, data, user_id):
+        #try:
+        async_to_sync(self.channel_layer.group_add)(
+            str(data['chat_id']),
+            self.channel_name
+        )
+
+        other_user_chat = ChatUser.objects.get(
+            Q(subscribed_chat=data['chat_id'])
+            & ~Q(user=user_id)
+        )
+
+        self.notify_chat(
+            str(other_user_chat.user.id),
+            {
+                'action': 'NEW_CHAT',
+                'chat_id': data['chat_id']
+            }
+        );
+        #except Exception as e:
+        #    print("error: " + str(e))
 
 
     """
@@ -94,50 +108,63 @@ class MessengerConsumer(WebsocketConsumer):
             self.channel_name
         )
 
-
+    """Sends a new chat message to group"""
     def message(self, data, user_id):
-        #try:
-        if len(data['message']) > 1000:
-            return
-        user = CustomUser.objects.get(id=user_id)
-        # confirm users are in chat
-        current_user_chat = ChatUser.objects.get(subscribed_chat=data['chat_id'], user=user)
-        other_user_chat = ChatUser.objects.get(
-            Q(subscribed_chat=data['chat_id'])
-            & ~Q(user=user)
-        )
-        other_user_chat.read = False
-        other_user_chat.last_updated = str(datetime.now())
-        current_user_chat.last_updated = str(datetime.now())
-        current_user_chat.save()
-        other_user_chat.save()
-        other_user = CustomUser.objects.get(id=other_user_chat.user.id)
-        chat = Chat.objects.get(id=data['chat_id'])
-        Messages.objects.create(
-            chat=chat,
-            user=user,
-            message=data['message'],
-        )
-        self.notify_chat(chat.id)
-        #except Exception as e:
-        #    print("error: " + str(e))
+        try:
+            if len(data['message']) > 1000:
+                return
+            user = CustomUser.objects.get(id=user_id)
+            # confirm users are in chat
+            current_user_chat = ChatUser.objects.get(subscribed_chat=data['chat_id'], user=user)
+            other_user_chat = ChatUser.objects.get(
+                Q(subscribed_chat=data['chat_id'])
+                & ~Q(user=user)
+            )
+            other_user_chat.read = False
+            other_user_chat.last_updated = str(datetime.now())
+            current_user_chat.last_updated = str(datetime.now())
+            current_user_chat.save()
+            other_user_chat.save()
+            other_user = CustomUser.objects.get(id=other_user_chat.user.id)
+            chat = Chat.objects.get(id=data['chat_id'])
+            data['message'] = data['message'].strip()
+            message = Messages.objects.create(
+                chat=chat,
+                user=user,
+                message=data['message'],
+            )
 
+            self.notify_chat(
+                str(chat.id),
+                {
+                    'action': 'NEW_CHAT_MESSAGE',
+                    'message': {
+                        'id': str(message.id),
+                        'chat_id': str(chat.id),
+                        'user_id': str(user.id),
+                        'message': data['message'],
+                        'datetime': str(message.timestamp),
+                    }
+                }
+            );
+        except Exception as e:
+            print("error: " + str(e))
 
-    def notify_chat(self, chat_id):
+    def notify_chat(self, group_name, data):
         async_to_sync(self.channel_layer.group_send)(
-            str(chat_id),
+            group_name,
             {
-                'type': 'chat_message',
-                'message': 'new_message'
+                'type': 'emit',
+                'data': data,
             }
         )
 
-    def chat_message(self, event):
-        message = event['message']
+    def emit(self, event):
+        data = event['data']
 
         # Send message to WebSocket
         self.send(text_data=json.dumps({
-            'message': message
+            'data': data
         }))
 
     def get_user_id(self, token):
