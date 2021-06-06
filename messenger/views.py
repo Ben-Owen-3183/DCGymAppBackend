@@ -32,6 +32,42 @@ def get_messages(chat_id):
         return []
 
 
+def get_messages_after_message_datetime(chat_id, msg_datetime, msg_id):
+    try:
+        messages = Messages.objects.filter(
+            Q(timestamp__range=[msg_datetime, datetime.now()])
+            & Q(chat=chat_id)
+            & ~Q(id=msg_id)
+        ).order_by('-timestamp')[:30]
+
+        message_list = []
+        for msg in messages:
+            message_list.append({
+                'id': msg.id,
+                'chat_id': msg.chat.id,
+                'user_id': msg.user.id,
+                'message': msg.message,
+                'datetime': msg.timestamp,
+            })
+        message_list
+        return message_list
+    except Exception as e:
+        return []
+
+
+def get_chat_data(user, chat_id):
+    user_chat = ChatUser.objects.get(subscribed_chat=chat_id, user=user)
+    other_user_chat = ChatUser.objects.get(
+        Q(subscribed_chat=chat_id)
+        & ~Q(user=user)
+    )
+    return {
+        'id': str(chat_id),
+        'read': user_chat.read,
+        'messages': get_messages(chat_id),
+        'other_user_data': user_row_to_json(other_user_chat.user)
+    }
+
 
 def user_row_to_json(user):
     return  {
@@ -116,22 +152,11 @@ class GetChat(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        #try:
-        chat_id = request.data['chat_id']
-        user_chat = ChatUser.objects.get(subscribed_chat=chat_id, user=request.user)
-        other_user_chat = ChatUser.objects.get(
-            Q(subscribed_chat=chat_id)
-            & ~Q(user=request.user)
-        )
-        return Response({
-            'id': str(chat_id),
-            'read': user_chat.read,
-            'messages': get_messages(chat_id),
-            'other_user_data': user_row_to_json(other_user_chat.user)
-        })
-        #except Exception as e:
-        #    print(str(e))
-        #return Response({})
+        try:
+            return Response(get_chat_data(user, chat_id))
+        except Exception as e:
+            print(str(e))
+        return Response({})
 
 
 class GetChats(APIView):
@@ -162,34 +187,34 @@ class GetChats(APIView):
         return Response({'chats': chats})
 
 
+# TODO ?#
 class GetPagedMessages(APIView):
     permission_classes = [IsAuthenticated]
 
-    # https://docs.djangoproject.com/en/3.2/topics/pagination/#paginating-a-listview
     def post(self, request):
-                #try:
-                page_num = request.data['page']
+        #try:
+        page_num = request.data['page']
 
-                messages = Messages.objects.filter(
-                    timestamp__range=["1066-01-01", datetime.now()],
-                     chat=chat_id
-                ).order_by('-timestamp')[:30]
+        messages = Messages.objects.filter(
+            timestamp__range=["1066-01-01", datetime.now()],
+            chat=chat_id
+        ).order_by('-timestamp')[:30]
 
-                Paginator()
+        Paginator()
 
-                message_list = []
-                for msg in messages:
-                    message_list.append({
-                        'id': msg.id,
-                        'chat_id': msg.chat.id,
-                        'user_id': msg.user.id,
-                        'message': msg.message,
-                        'datetime': msg.timestamp,
-                    })
-                message_list
-                return message_list
-                #except:
-                return []
+        message_list = []
+        for msg in messages:
+            message_list.append({
+                'id': msg.id,
+                'chat_id': msg.chat.id,
+                'user_id': msg.user.id,
+                'message': msg.message,
+                'datetime': msg.timestamp,
+            })
+        message_list
+        return message_list
+        #except:
+        return []
 
 
 """ call to set a chat to read """
@@ -208,6 +233,81 @@ class ChatRead(APIView):
             print(e)
 
         return Response({})
+
+
+"""
+    responds with all the missing messages and chats of a user
+    data = {
+        chats_data: [
+            {
+                chat_id: ...
+                last_message_id: ...request
+                last_message_time: ...
+            },
+            {
+                ...
+            }
+        ]
+    }
+"""
+class SyncChats(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def match_chat(self, chats, chat_id):
+        for chat in chats:
+            if str(chat['chat_id']) == str(chat_id):
+                return chat
+        return None
+
+
+    def add_msgs_to_response(self, response, matched_chat):
+        messages = get_messages_after_message_datetime(
+            matched_chat['chat_id'],
+            matched_chat['last_message_time'],
+            matched_chat['last_message_id'],
+        )
+        return {
+            'chat_id': matched_chat['chat_id'],
+            'messages': messages
+        }
+
+
+    def post(self, request):
+        #try:
+        users_chats = ChatUser.objects.filter(user=request.user)
+        chats_data = request.data['chats_data']
+        response = {
+            'new_chats': [],
+            'new_chat_messages': []
+        }
+
+        for user_chat in users_chats:
+            chat_id = user_chat.subscribed_chat.id
+            matched_chat = self.match_chat(chats_data, chat_id)
+            if matched_chat and matched_chat.get('last_message_time'):
+                new_messages_data = self.add_msgs_to_response(response, matched_chat)
+                if len(new_messages_data['messages']) > 0:
+                    response['new_chat_messages'].append(new_messages_data)
+            else:
+                pass
+                response['new_chats'].append(
+                    get_chat_data(request.user, chat_id))
+
+        return Response(response)
+        #except Exception as e:
+            #print(e);
+            #return Response({})
+
+
+
+
+
+""" returns messages of chat after datetime """
+class ChatHistory(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        pass
 
 
 
