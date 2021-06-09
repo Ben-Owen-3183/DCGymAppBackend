@@ -8,7 +8,8 @@ from django.db.models import Q
 from datetime import datetime
 from user_account.models import UserAvatar
 from django.core.paginator import Paginator
-
+from django.db.models import Exists
+import logging
 
 def get_messages(chat_id):
     try:
@@ -119,7 +120,7 @@ class CreateNewChat(APIView):
                 user=other_user_data
             )
         except Exception as e:
-            print(e)
+            logging.exception('Create New Chat')
             return Response({'errors': ['failed to make new chat. Possible other user does not exist.']})
 
         print("new chat has been made.")
@@ -153,9 +154,9 @@ class GetChat(APIView):
 
     def post(self, request):
         try:
-            return Response(get_chat_data(user, chat_id))
+            return Response(get_chat_data(request.user, request.data['chat_id']))
         except Exception as e:
-            print(str(e))
+            logging.exception('Get Chat')
         return Response({})
 
 
@@ -182,39 +183,10 @@ class GetChats(APIView):
                         'other_user_data': user_row_to_json(other_user)
                     })
         except Exception as e:
-            print(e);
+            logging.exception('Get Chats')
             return Response({'error': ['something went wrong getting chats']})
         return Response({'chats': chats})
 
-
-# TODO ?#
-class GetPagedMessages(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        #try:
-        page_num = request.data['page']
-
-        messages = Messages.objects.filter(
-            timestamp__range=["1066-01-01", datetime.now()],
-            chat=chat_id
-        ).order_by('-timestamp')[:30]
-
-        Paginator()
-
-        message_list = []
-        for msg in messages:
-            message_list.append({
-                'id': msg.id,
-                'chat_id': msg.chat.id,
-                'user_id': msg.user.id,
-                'message': msg.message,
-                'datetime': msg.timestamp,
-            })
-        message_list
-        return message_list
-        #except:
-        return []
 
 
 """ call to set a chat to read """
@@ -230,8 +202,7 @@ class ChatRead(APIView):
             chat_user.read = True
             chat_user.save()
         except Exception as e:
-            print(e)
-
+            logging.exception('Chat Read')
         return Response({})
 
 
@@ -273,33 +244,30 @@ class SyncChats(APIView):
 
 
     def post(self, request):
-        #try:
-        users_chats = ChatUser.objects.filter(user=request.user)
-        chats_data = request.data['chats_data']
-        response = {
-            'new_chats': [],
-            'new_chat_messages': []
-        }
+        try:
+            users_chats = ChatUser.objects.filter(user=request.user)
+            chats_data = request.data['chats_data']
+            response = {
+                'new_chats': [],
+                'new_chat_messages': []
+            }
 
-        for user_chat in users_chats:
-            chat_id = user_chat.subscribed_chat.id
-            matched_chat = self.match_chat(chats_data, chat_id)
-            if matched_chat and matched_chat.get('last_message_time'):
-                new_messages_data = self.add_msgs_to_response(response, matched_chat)
-                if len(new_messages_data['messages']) > 0:
-                    response['new_chat_messages'].append(new_messages_data)
-            else:
-                pass
-                response['new_chats'].append(
-                    get_chat_data(request.user, chat_id))
+            for user_chat in users_chats:
+                chat_id = user_chat.subscribed_chat.id
+                matched_chat = self.match_chat(chats_data, chat_id)
+                if matched_chat and matched_chat.get('last_message_time'):
+                    new_messages_data = self.add_msgs_to_response(response, matched_chat)
+                    if len(new_messages_data['messages']) > 0:
+                        response['new_chat_messages'].append(new_messages_data)
+                else:
+                    new_chat = get_chat_data(request.user, chat_id)
+                    if len(new_chat['messages']) > 0:
+                        response['new_chats'].append(new_chat)
 
-        return Response(response)
-        #except Exception as e:
-            #print(e);
-            #return Response({})
-
-
-
+            return Response(response)
+        except Exception as e:
+            logging.exception('Sync Chats')
+            return Response({})
 
 
 """ returns messages of chat after datetime """
@@ -307,7 +275,47 @@ class ChatHistory(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
-        pass
+        try:
+            chat_id = request.data['chat_id']
+            user_is_in_chat = Exists(ChatUser.objects.filter(
+                user=request.user, subscribed_chat=chat_id
+            ))
+
+            if not user_is_in_chat:
+                raise Exception("user not in chat")
+
+            msg_id = request.data['last_message_id']
+            msg_datetime = request.data['last_message_time']
+            messages = self.get_messages_before_message_datetime(chat_id, msg_datetime, msg_id)
+            return Response({'messages': messages})
+        except Exception as e:
+            logging.exception('Chat History')
+            return Response()
+
+
+
+    def get_messages_before_message_datetime(self, chat_id, msg_datetime, msg_id):
+        try:
+            messages = Messages.objects.filter(
+                Q(timestamp__range=['1066-01-01', msg_datetime])
+                & Q(chat=chat_id)
+                & ~Q(id=msg_id)
+            ).order_by('-timestamp')[:30]
+
+            message_list = []
+            for msg in messages:
+                message_list.append({
+                    'id': msg.id,
+                    'chat_id': msg.chat.id,
+                    'user_id': msg.user.id,
+                    'message': msg.message,
+                    'datetime': msg.timestamp,
+                })
+            message_list
+            return message_list
+        except Exception as e:
+            return []
+
 
 
 

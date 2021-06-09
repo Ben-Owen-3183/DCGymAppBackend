@@ -7,4 +7,5 @@ urlpatterns = [
     path('set_chat_read/', views.ChatRead.as_view()),
     path('get_chat/', views.GetChat.as_view()),
     path('sync_chat/', views.SyncChats.as_view()),
+    path('chat_history/', views.ChatHistory.as_view()),
 ]
