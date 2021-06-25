@@ -24,4 +24,5 @@ urlpatterns = [
     path('', include('signup.urls')),
     path('user/', include('user_account.urls')),
     path('messenger/', include('messenger.urls')),
+    path('feed/', include('feed.urls')),
 ] + static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)

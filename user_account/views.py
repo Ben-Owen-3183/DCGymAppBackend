@@ -57,7 +57,7 @@ class GetStaff(APIView):
 
 
 class UserSearch(APIView):
-    permission_classes = [AllowAny]
+    permission_classes = [IsAuthenticated]
 
 
     def post(self, request):
@@ -189,7 +189,6 @@ class ConfirmPassReset(View):
         return HttpResponse(success_page)
 
 
-
 class PassReset(APIView):
     permission_classes = [AllowAny]
 
@@ -251,6 +250,7 @@ class Avatar(APIView):
             if extension == el:
                 return True
         return False
+
 
     def post(self, request):
         content_type = request.FILES['image'].content_type

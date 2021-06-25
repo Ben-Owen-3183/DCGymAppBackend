@@ -16,5 +16,5 @@ class ChatUser(models.Model):
 class Messages(models.Model):
     chat = models.ForeignKey(Chat, on_delete=models.CASCADE)
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    message = models.TextField(max_length=1000)
+    message = models.CharField(max_length=1000)
     timestamp = models.DateTimeField(auto_now=True)

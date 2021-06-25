@@ -66,6 +66,7 @@ INSTALLED_APPS = [
     'signup',
     'user_account',
     'messenger',
+    'feed',
     'channels',
 ]
 
