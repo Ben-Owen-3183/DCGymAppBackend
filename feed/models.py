@@ -29,13 +29,56 @@ class CommentReplies(models.Model):
 
 # Likes
 class PostLikes(models.Model):
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+    )
+    post = models.ForeignKey(
+        Post,
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+    )
+
+    class Meta:
+        unique_together = ('user', 'post',)
 
 class PostCommentLikes(models.Model):
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    post_comment = models.ForeignKey(PostComment, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+    )
+    post_comment = models.ForeignKey(
+        PostComment,
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+    )
+
+    class Meta:
+        unique_together = ('user', 'post_comment',)
 
 class ReplyReplyLikes(models.Model):
-    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
-    comment_reply = models.ForeignKey(CommentReplies, on_delete=models.CASCADE)
+    user = models.ForeignKey(
+        CustomUser,
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+    )
+    comment_reply = models.ForeignKey(
+        CommentReplies,
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+    )
+
+    class Meta:
+        unique_together = ('user', 'comment_reply',)
+
+
+
+#

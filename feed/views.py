@@ -20,9 +20,10 @@ def post_to_json(post):
         'id': post.id,
         'user': user_to_json(post.user),
         'content': post.content,
-        'image_url': '/media/post_images/' + post.image_name,
-        'like_count': post.like_count,
+        'image_url': '/media/post_images/' + post.image_name if post.image_name else '',
+        'like_count': PostLikes.objects.filter(post=post).count(),  #post.like_count,
         'timestamp': post.timestamp,
+        'pinned': post.pinned,
         'comments': comments_to_json(post)
     }
 
@@ -80,7 +81,7 @@ def comment_to_json(comment):
         'user': user_to_json(comment.user),
         'post_id': comment.post.id,
         'text': comment.text,
-        'like_count': comment.like_count,
+        'like_count': PostCommentLikes.objects.filter(post_comment=comment).count(), # comment.like_count,
         'timestamp': comment.timestamp,
         'replies': replies_to_json(comment)
     }
@@ -104,7 +105,7 @@ def reply_to_json(reply):
         'post_id': reply.post.id,
         'comment_id': reply.post_comment.id,
         'text': reply.text,
-        'like_count': reply.like_count,
+        'like_count': ReplyReplyLikes.objects.filter(comment_reply=reply).count(), # reply.like_count,
         'timestamp': reply.timestamp,
     }
 
@@ -133,9 +134,17 @@ class LikePost(APIView):
 
     def post(self, request):
         try:
-            pass
+            id = request.data['id']
+            post = Post.objects.filter(id=id)[0]
+            try:
+                post_like = PostLikes.objects.filter(user=request.user, post=post)[0]
+                post_like.delete()
+            except Exception as e:
+                PostLikes.objects.create(user=request.user, post=post)
+            return Response({'post': post_to_json(post)})
         except Exception as e:
             logging.exception('LikePost')
+            return Response({'errors': 'request failed'})
 
 
 class LikeComment(APIView):
@@ -143,9 +152,17 @@ class LikeComment(APIView):
 
     def post(self, request):
         try:
-            pass
+            id = request.data['id']
+            comment = PostComment.objects.filter(id=id)[0]
+            try:
+                comment_like = PostCommentLikes.objects.filter(user=request.user, post_comment=comment)[0]
+                comment_like.delete()
+            except Exception as e:
+                PostCommentLikes.objects.create(user=request.user, post_comment=comment)
+            return Response({'comment': comment_to_json(comment)})
         except Exception as e:
             logging.exception('LikeComment')
+            return Response({'errors': 'request failed'})
 
 
 class LikeReply(APIView):
@@ -153,9 +170,17 @@ class LikeReply(APIView):
 
     def post(self, request):
         try:
-            pass
+            id = request.data['id']
+            reply = CommentReplies.objects.filter(id=id)[0]
+            try:
+                reply_like = ReplyReplyLikes.objects.filter(user=request.user, comment_reply=reply)[0]
+                reply_like.delete()
+            except Exception as e:
+                ReplyReplyLikes.objects.create(user=request.user, comment_reply=reply)
+            return Response({'reply': reply_to_json(reply)})
         except Exception as e:
             logging.exception('LikeReply')
+            return Response({'errors': 'request failed'})
 
 
 # Post
@@ -191,7 +216,6 @@ class NewPost(APIView):
             if 'image' in request.FILES:
                 file_name = self.store_post_image(request)
 
-            print(request.data['post_text'])
             content = request.data['post_text']
             content = content.strip()
             if content == "":
@@ -203,12 +227,18 @@ class NewPost(APIView):
                 content=content,
                 like_count=1,
             )
+            print(newPost)
 
             PostLikes.objects.create(user=request.user, post=newPost)
 
+            admin_options = {
+                'notify': True if request.data['notify'] == 'true' else False,
+                'pin_post': True if request.data['pin_post'] == 'true' else False,
+                'pin_post_time_limit': True if request.data['pin_post_time_limit'] == 'true' else False,
+                'pin_post_days': request.data['pin_post_days'],
+            }
 
-            if 'admin_options' in request.data and (request.user.is_staff or request.user.is_superuser):
-                admin_options = request.data['admin_options']
+            if  request.user.is_staff or request.user.is_superuser:
                 newPost.pinned = admin_options['pin_post']
                 if admin_options['pin_post_time_limit']:
                     newPost.pinned_time_days = True
@@ -218,7 +248,7 @@ class NewPost(APIView):
             return Response({'success': 'true'})
         except Exception as e:
             logging.exception('NewPost')
-            return Response()
+            return Response({'errors': 'request failed'})
 
 
 class NewPostComment(APIView):
@@ -263,24 +293,42 @@ class NewCommentReply(APIView):
             logging.exception('NewPostReply')
             return Response({'error': ['something went wrong']})
 
-
 # Get
 class GetPosts(APIView):
     permission_classes = [IsAuthenticated]
 
-    def get(self, request):
-        try:
-            pinned_posts = Post.objects.filter(pinned=True).order_by('timestamp')[:POST_AMOUNT]
-            pinned_posts = validate_pinned_posts(pinned_posts)
-            new_page_length = (POST_AMOUNT - len(pinned_posts))
-            posts = Post.objects.filter(pinned=False).order_by('timestamp')[:new_page_length]
+    def post(self, request):
 
-            json_posts = posts_to_json(posts)
+        try:
+            user_posts_only = request.data['user_posts_only']
+            pinned_posts = None
+            if user_posts_only:
+                pinned_posts = Post.objects.filter(
+                    Q(pinned=True)
+                    & Q(user=request.user)
+                ).order_by('-timestamp')
+            else:
+                pinned_posts = Post.objects.filter(pinned=True).order_by('-timestamp')
+
+            pinned_posts = validate_pinned_posts(pinned_posts)
             json_pinned_posts = posts_to_json(pinned_posts)
-            return Response(json_pinned_posts + json_posts)
+            new_page_length = (POST_AMOUNT - len(pinned_posts))
+            posts = None
+            if new_page_length > 0:
+                if user_posts_only:
+                    posts = Post.objects.filter(
+                        Q(pinned=False)
+                        & Q(user=request.user)
+                    ).order_by('-timestamp')[:new_page_length]
+                else:
+                    posts = Post.objects.filter(pinned=False).order_by('-timestamp')[:new_page_length]
+
+                json_posts = posts_to_json(posts)
+                return Response({'posts': json_pinned_posts + json_posts})
+            return Response({'posts': json_pinned_posts})
         except Exception as e:
             logging.exception('GetPosts')
-            return Response({'errors', 'request failed'})
+            return Response({'errors': 'request failed'})
 
 
 class GetPostBeforeDateTime(APIView):
@@ -288,30 +336,71 @@ class GetPostBeforeDateTime(APIView):
 
     def post(self, request):
         try:
-            pass
+            user_posts_only = request.data['user_posts_only']
+            datetime = request.data['datetime']
+            post_id = request.data['post_id']
+
+            posts = None
+
+            if user_posts_only:
+                posts = Post.objects.filter(
+                    Q(timestamp__range=['1066-01-01', datetime])
+                    & ~Q(id=post_id)
+                    & Q(pinned=False)
+                    & Q(user=request.user)
+                ).order_by('-timestamp')[:POST_AMOUNT]
+            else:
+                posts = Post.objects.filter(
+                    Q(timestamp__range=['1066-01-01', datetime])
+                    & ~Q(id=post_id)
+                    & Q(pinned=False)
+                ).order_by('-timestamp')[:POST_AMOUNT]
+
+            json_posts = posts_to_json(posts)
+            return Response({'posts': json_posts})
         except Exception as e:
             logging.exception('GetPostBeforeDateTime')
-
-
-class GetPostAfterDateTime(APIView):
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request):
-        try:
-            pass
-        except Exception as e:
-            logging.exception('GetPostAfterDateTime')
+            return Response({'errors': 'request failed'})
 
 
 class DeletePost(APIView):
     permission_classes = [IsAuthenticated]
 
     def post(self, request):
+        if not request.user.is_staff or not request.user.is_superuser:
+            return Response({'errors': 'you do not have permission to perform this action'})
+
         try:
-            pass
+
+            post_id = request.data['post_id']
+            post = Post.objects.get(id=post_id)
+            post.delete()
+            return Response({'success': 'post deleted'})
         except Exception as e:
             logging.exception('DeletePost')
+            return Response({'errors': 'request failed'})
 
+
+class PinPost(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def post(self, request):
+        if not request.user.is_staff or not request.user.is_superuser:
+            return Response({'errors': 'you do not have permission to perform this action'})
+
+        try:
+
+            post_id = request.data['post_id']
+            post = Post.objects.get(id=post_id)
+            if post.pinned:
+                post.pinned = False
+            else:
+                post.pinned = True
+            post.save()
+            return Response({'post': post_to_json(post)})
+        except Exception as e:
+            logging.exception('PinPost')
+            return Response({'errors': 'request failed'})
 
 
 

@@ -10,6 +10,7 @@ urlpatterns = [
     path('new_comment_reply/', views.NewCommentReply.as_view()),
     path('get_posts/', views.GetPosts.as_view()),
     path('get_posts_before/', views.GetPostBeforeDateTime.as_view()),
-    path('get_posts_after/', views.GetPostAfterDateTime.as_view()),
+    # path('get_posts_after/', views.GetPostAfterDateTime.as_view()),
     path('delete_post/', views.DeletePost.as_view()),
+    path('pin_post/', views.PinPost.as_view()),
 ]
