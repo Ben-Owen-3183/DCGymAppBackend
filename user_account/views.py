@@ -39,7 +39,6 @@ class UserAccount(APIView):
 
 
 class GetStaff(APIView):
-    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         staff = CustomUser.objects.filter(is_staff=True).order_by('-is_superuser')
@@ -57,7 +56,6 @@ class GetStaff(APIView):
 
 
 class UserSearch(APIView):
-    permission_classes = [IsAuthenticated]
 
 
     def post(self, request):
@@ -241,7 +239,6 @@ class PassReset(APIView):
 
 
 class Avatar(APIView):
-    permission_classes = [IsAuthenticated]
 
     def is_image_file(self, extension):
         extension = '.' + extension

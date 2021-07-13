@@ -23,6 +23,7 @@ from datetime import date
 # CUSTOM
 from signup.models import PotentialUser
 from login.models import CustomUser
+from login.membership_status import member_status_checker
 
 class signup(APIView):
     permission_classes = [AllowAny]
@@ -128,14 +129,16 @@ class signup(APIView):
 
         errors = self.validate_names(errors, request.data)
 
-        # remove spaces from email
-        request.data['email'] = request.data['email'].strip(' ')
-        request.data['emailConf'] = request.data['emailConf'].strip(' ')
+        # remove spaces from email and set to lower case
+        request.data['email'] = request.data['email'].strip(' ').lower()
+        request.data['emailConf'] = request.data['emailConf'].strip(' ').lower()
         errors = self.validate_email(errors, request.data)
 
-
         if not errors['email'] and not errors['password'] and not errors['name']:
-            user_is_member = True # check email exists on club manager database
+            user_is_member = member_status_checker.user_is_active_member(request.data['email'])
+            print('user_is_member: ' + str(user_is_member))
+            user_is_member = False
+
             if user_is_member:
                 hashed_password = make_password(request.data['password'], salt=None, hasher='default')
                 verifcation_token = uuid.uuid4()
@@ -155,12 +158,13 @@ class signup(APIView):
                     (request.data['fName'] + ' ' + request.data['sName']))
             else:
                 errors['email'].append(
-                """
-                    We were unable to link your email to an active gym membership.
-                    Make sure you are using the same email you used to sign up to the gym.
-                    If you are not already a member of David Corfields Gymnasium press the menu you icon in the top right and select Gym Membership.
-                    From there, follow the signup instructions.
-                """
+                "We were unable to link your email to an active gym membership.\n\n"
+                + "Make sure you are using the same email you used to sign up to the gym.\n\n"
+                + "If you just signed up to gym and are a paying member, you may need to wait 5 minutes for this to be verfied by the app.\n\n"
+                + "If you are not already a member of David Corfields Gymnasium press the menu icon in the top right and select Gym Membership.\n\n"
+                + "From there, follow the signup instructions.\n\n"
+                + "If you are still having issues with the signup process when you are a member please get in contact with us so we can resolve this issue.\n\n"
+
                 )
         return JsonResponse({
             'errors': errors

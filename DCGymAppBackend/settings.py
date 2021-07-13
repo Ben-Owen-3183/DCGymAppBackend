@@ -26,6 +26,11 @@ ACCOUNT_USERNAME_REQUIRED = False
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = '7pvcv0z^4a@oiw3zai+ngs$2!h7ticm@(_0h2f31m(^jbugl30'
 
+# go cardless
+GC_ACCESS_TOKEN = 'sandbox_1fDhb1JtyUn-DvM8bzZOS_jKihtFRYp4fpXCsLxZ'
+GC_ENVIRONMENT = 'sandbox'
+STRIPE_ACCESS_TOKEN = 'rk_test_51JBhhHEYJGQQFD5jrufkL9fwnyDcPHU9iPibh2ICqkwJQQHVZF9bqOPzbONg3S7XoArHwj1Ixtl9Sb8hXkZfiU23008ydeSO3x'
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
@@ -41,8 +46,10 @@ REST_FRAMEWORK = {
     ],
     'DEFAULT_PERMISSION_CLASSES': [
         'rest_framework.permissions.IsAuthenticated',
+        'login.member_permission.IsActiveMember',
     ]
 }
+
 
 FILE_UPLOAD_HANDLERS = [
     'django.core.files.uploadhandler.MemoryFileUploadHandler',

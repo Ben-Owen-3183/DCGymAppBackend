@@ -6,7 +6,6 @@ from timetable.models import TimeTable
 import logging
 
 class GetTimeTable(APIView):
-    permission_classes = [IsAuthenticated]
 
     def day_to_json(self, day):
         day_data = []

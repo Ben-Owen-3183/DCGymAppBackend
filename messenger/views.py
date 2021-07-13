@@ -91,7 +91,6 @@ def getUserAvatar(user_id):
 
 # Create your views here.
 class CreateNewChat(APIView):
-    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         if request.user.id == request.data['otherUser']:
@@ -150,7 +149,6 @@ class CreateNewChat(APIView):
 
 
 class GetChat(APIView):
-    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:
@@ -161,7 +159,6 @@ class GetChat(APIView):
 
 
 class GetChats(APIView):
-    permission_classes = [IsAuthenticated]
 
     def get(self, request):
         chats = []
@@ -191,7 +188,6 @@ class GetChats(APIView):
 
 """ call to set a chat to read """
 class ChatRead(APIView):
-    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:
@@ -222,7 +218,6 @@ class ChatRead(APIView):
     }
 """
 class SyncChats(APIView):
-    permission_classes = [IsAuthenticated]
 
     def match_chat(self, chats, chat_id):
         for chat in chats:
@@ -272,7 +267,6 @@ class SyncChats(APIView):
 
 """ returns messages of chat after datetime """
 class ChatHistory(APIView):
-    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:

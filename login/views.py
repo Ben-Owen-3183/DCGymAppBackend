@@ -3,16 +3,22 @@ from rest_framework.authtoken.models import Token
 from rest_framework.response import Response
 from rest_framework.permissions import AllowAny
 from user_account.models import UserAvatar
+from .membership_status import member_status_checker
+
 
 class login(ObtainAuthToken):
     permission_classes = [AllowAny]
 
     def post(self, request, *args, **kwargs):
+        request.data['username'] = request.data['username'].lower()
         serializer = self.serializer_class(data=request.data, context={'request': request})
 
         serializer.is_valid(raise_exception=True)
         user = serializer.validated_data['user']
         token, created = Token.objects.get_or_create(user=user)
+
+        if not member_status_checker.user_is_active_member(user.email):
+            return Response({'membership': 'not active member'})
 
         avatarName = None
         try:

@@ -6,6 +6,7 @@ from login.models import CustomUser
 from datetime import datetime
 from django.db.models import Q
 from rest_framework.permissions import IsAuthenticated
+from login.member_permission import IsActiveMember
 from rest_framework.response import Response
 from PIL import Image
 from django.core.files.storage import FileSystemStorage
@@ -130,7 +131,6 @@ def posts_to_json(posts):
 
 
 class LikePost(APIView):
-    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:
@@ -148,7 +148,6 @@ class LikePost(APIView):
 
 
 class LikeComment(APIView):
-    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:
@@ -166,7 +165,6 @@ class LikeComment(APIView):
 
 
 class LikeReply(APIView):
-    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:
@@ -185,7 +183,6 @@ class LikeReply(APIView):
 
 # Post
 class NewPost(APIView):
-    permission_classes = [IsAuthenticated]
 
     # ignore empty text
     # remove duplicate new lines
@@ -252,7 +249,6 @@ class NewPost(APIView):
 
 
 class NewPostComment(APIView):
-    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:
@@ -272,7 +268,6 @@ class NewPostComment(APIView):
 
 
 class NewCommentReply(APIView):
-    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:
@@ -295,7 +290,6 @@ class NewCommentReply(APIView):
 
 # Get
 class GetPosts(APIView):
-    permission_classes = [IsAuthenticated]
 
     def post(self, request):
 
@@ -332,7 +326,6 @@ class GetPosts(APIView):
 
 
 class GetPostBeforeDateTime(APIView):
-    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         try:
@@ -364,7 +357,6 @@ class GetPostBeforeDateTime(APIView):
 
 
 class DeletePost(APIView):
-    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         if not request.user.is_staff or not request.user.is_superuser:
@@ -382,7 +374,6 @@ class DeletePost(APIView):
 
 
 class PinPost(APIView):
-    permission_classes = [IsAuthenticated]
 
     def post(self, request):
         if not request.user.is_staff or not request.user.is_superuser:

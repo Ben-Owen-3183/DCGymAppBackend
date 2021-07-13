@@ -8,7 +8,6 @@ class TimeTable(models.Model):
     excercise = models.CharField(max_length=150)
     instructor = models.CharField(max_length=150)
 
-
     class Day(models.TextChoices):
         MONDAY = 'Monday'
         TUESDAY = 'Tuesday'
