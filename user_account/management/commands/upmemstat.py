@@ -175,7 +175,6 @@ class Command(BaseCommand):
                         member.save()
                     # if member is not in system add them
                     else:
-                        print('created member')
                         members_to_create.append(
                             MembershipStatus(
                                 api_type='stripe',

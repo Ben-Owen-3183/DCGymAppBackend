@@ -26,4 +26,5 @@ urlpatterns = [
     path('messenger/', include('messenger.urls')),
     path('feed/', include('feed.urls')),
     path('timetable/', include('timetable.urls')),
+    path('video/', include('live_stream.urls')),
 ] + static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
