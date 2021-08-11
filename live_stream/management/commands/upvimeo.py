@@ -13,22 +13,6 @@ from datetime import datetime, timedelta
 # cronjob command
 # python3 manage.py upvimeo >> live_stream/management/commands/logs.txt
 
-"""
-possible useful keys:
-
-parent_folder
-
-name
-
-uri
-
-pictures
-
-upload.upload_link
-
-"""
-
-
 v = vimeo.VimeoClient(
     settings.VIMEO_KEYS['token'],
     settings.VIMEO_KEYS['key'],
@@ -50,7 +34,8 @@ class Command(BaseCommand):
             for video in decoded_response['data']:
                 try:
                     video_id = video['uri'].split('/')[2]
-                    if not self.video_exists(video_id):
+                    stored_video = self.video_exists(video_id)
+                    if stored_video == None:
                         type = ''
                         parent_folder = ''
                         try:
@@ -68,19 +53,18 @@ class Command(BaseCommand):
                             type=type,
                             vimeo_id=video_id,
                             name=video['name'],
-                            file_link=video['files'][0]['link'],
+                            video_url=video['link'],
                             thumbnail_link=self.get_thumbnail_link(video['pictures']['sizes']),
                             last_updated=current_datetime,
                             upload_date=video['release_time']
                         ))
                     else:
-                        print('Still not updating...')
-                        pass
-                        # update !!!!!!!!!!!!!!!!
+                        stored_video.last_updated(current_datetime)
                 except Exception as e:
                     pass
                     # logging.exception('vimeo')
         VimeoVideos.objects.bulk_create(videos_to_create)
+        all_videos.update()
         current_datetime = current_datetime - timedelta(minutes=1)
         current_datetime.replace(day=1)
         response = VimeoVideos.objects.filter(last_updated__range=['1066-10-14T13:47:23Z', current_datetime]).delete()
@@ -88,8 +72,8 @@ class Command(BaseCommand):
     def video_exists(self, id):
         for video in all_videos:
             if video.vimeo_id == id:
-                return True
-        return False
+                return video
+        return None
 
 
     def get_thumbnail_link(self, data):

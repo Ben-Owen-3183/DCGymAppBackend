@@ -12,7 +12,7 @@ def video_row_to_json(videos):
         json_videos.append({
             'id': video.vimeo_id,
             'name': video.name,
-            'file': video.file_link,
+            'file': video.video_url,
             'thumbnail': video.thumbnail_link,
             'last_updated': video.last_updated,
             'upload_date': video.upload_date,
@@ -23,7 +23,7 @@ def video_row_to_json(videos):
 class GetLiveStream(APIView):
     def get(self, request):
         try:
-            live_streams = VimeoLiveStreams.objects.all().order_by('-time_from')
+            live_streams = VimeoLiveStreams.objects.all().order_by('time_from')
             stream_by_day = {
                 'Monday': [],
                 'Tuesday': [],
@@ -38,12 +38,7 @@ class GetLiveStream(APIView):
                 time_to = datetime.strptime(str(stream.time_to), "%H:%M:%S")
                 time_from_str = time_from.strftime("%-I:%M%p")
                 time_to_str = time_to.strftime("%-I:%M%p")
-                """
-                time_split = str(stream.time_from).split(':')
-                time_from_str = time_split[0] + ':' + time_split[1]
-                time_split = str(stream.time_to).split(':')
-                time_to_str = time_split[0] + ':' + time_split[1]
-                """
+
                 stream_by_day[stream.day].append({
                     'name': stream.name,
                     'time': time_from_str + '-' + time_to_str,

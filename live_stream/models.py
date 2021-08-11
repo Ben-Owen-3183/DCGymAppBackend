@@ -5,7 +5,7 @@ from django.db import models
 class VimeoVideos(models.Model):
     vimeo_id = models.CharField(max_length=100)
     name = models.TextField(max_length=250)
-    file_link = models.TextField(max_length=250)
+    video_url = models.TextField(max_length=250)
     thumbnail_link = models.TextField(max_length=250)
     last_updated = models.DateTimeField()
     upload_date = models.DateTimeField()
