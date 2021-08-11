@@ -80,7 +80,7 @@ class MessengerConsumer(WebsocketConsumer):
                 'action': 'SET_CHAT_READ',
                 'chat_id': str(chat_id)
             }
-        );
+        )
 
 
     def add_new_chats(self, user_id):
@@ -114,7 +114,7 @@ class MessengerConsumer(WebsocketConsumer):
                     'action': 'NEW_CHAT',
                     'chat_id': data['chat_id']
                 }
-            );
+            )
         except Exception as e:
             logging.exception('New Chat')
 
@@ -200,7 +200,7 @@ class MessengerConsumer(WebsocketConsumer):
                     }
 
                 }
-            );
+            )
         except Exception as e:
             logging.exception('New Message')
 

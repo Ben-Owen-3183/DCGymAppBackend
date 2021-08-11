@@ -29,7 +29,17 @@ SECRET_KEY = '7pvcv0z^4a@oiw3zai+ngs$2!h7ticm@(_0h2f31m(^jbugl30'
 # go cardless
 GC_ACCESS_TOKEN = 'sandbox_1fDhb1JtyUn-DvM8bzZOS_jKihtFRYp4fpXCsLxZ'
 GC_ENVIRONMENT = 'sandbox'
+
+# stripe
 STRIPE_ACCESS_TOKEN = 'rk_test_51JBhhHEYJGQQFD5jrufkL9fwnyDcPHU9iPibh2ICqkwJQQHVZF9bqOPzbONg3S7XoArHwj1Ixtl9Sb8hXkZfiU23008ydeSO3x'
+
+# vimeo
+VIMEO_KEYS = {
+    'token': '99fd02686de04b343fcea386dbf54af4',
+    'key': '7c2e587dda9cdfa9d0f8f2769b22605e49e5c37f',
+    'secret': 'p7KB9KiD084szK/xbV9ycZE6xOY9d/s8AWdK0W38cFz69WgJ7ZWw/ahUwfQc3rPyE+IYAxB7+hfOQ50O24KNBxJuC8k707kcKv3YQvaakMtfVpzlxyCV/UaAPTmcnKxY'
+}
+
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
@@ -75,6 +85,7 @@ INSTALLED_APPS = [
     'messenger',
     'feed',
     'timetable',
+    'live_stream',
     'channels',
 ]
 

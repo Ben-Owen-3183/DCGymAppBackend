@@ -26,10 +26,18 @@ def getUserAvatar(user_id):
         userAvatar = UserAvatar.objects.get(user=user_id)
         return userAvatar.image_name
     except:
-        pass
-    return ''
+        return ''
 
 
+def user_to_json(user):
+    return  {
+        'id': user.id,
+        'fName': user.first_name,
+        'sName': user.last_name,
+        'isSuperUser': user.is_superuser,
+        'isStaff': False if user.hidden else user.is_staff,
+        'avatarURL': getUserAvatar(user.id)
+    }
 
 
 class UserAccount(APIView):
@@ -44,14 +52,8 @@ class GetStaff(APIView):
         staff = CustomUser.objects.filter(is_staff=True).order_by('-is_superuser')
         staff_list = []
         for s in staff:
-            staff_list.append({
-                'id': s.id,
-                'fName': s.first_name,
-                'sName': s.last_name,
-                'isSuperUser': s.is_superuser,
-                'isStaff': s.is_staff,
-                'avatarURL': getUserAvatar(s.id)
-            })
+            if not s.hidden:
+                staff_list.append(user_to_json(s))
         return Response({'staff_list' : staff_list})
 
 
@@ -65,16 +67,11 @@ class UserSearch(APIView):
             similarity=TrigramSimilarity('first_name', name) + TrigramSimilarity('last_name', name),
         ).filter(similarity__gt=0.2).order_by('-similarity')[:20]
 
+
         response = []
         for user in results:
-            response.append({
-                'id': user.id,
-                'fName': user.first_name,
-                'sName': user.last_name,
-                'isSuperUser': user.is_superuser,
-                'isStaff': user.is_staff,
-                'avatarURL': getUserAvatar(user.id)
-            })
+            if not user.hidden and request.user.id != user.id:
+                response.append(user_to_json(user))
         return Response(response)
 
 
@@ -133,7 +130,7 @@ class ConfirmPassReset(View):
             <p>After you login with your new password press the menu icon in the top right to
             open the app menu. From there press "settings" and choose "change password".
             You will then be able to set a new memorable password. You will need this generated password
-            to perform this action</p>
+            to perform this action so don't loose it.</p>
         """
         text_content = strip_tags(html_content)
         body = ''
@@ -189,7 +186,6 @@ class ConfirmPassReset(View):
 
 class PassReset(APIView):
     permission_classes = [AllowAny]
-
 
     """
     Send verifcation email

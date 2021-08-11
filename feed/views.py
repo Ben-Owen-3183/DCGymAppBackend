@@ -11,6 +11,8 @@ from rest_framework.response import Response
 from PIL import Image
 from django.core.files.storage import FileSystemStorage
 from datetime import date
+from django.conf import settings
+import vimeo
 
 # number of posts to be returned by default
 POST_AMOUNT = 5
@@ -25,7 +27,9 @@ def post_to_json(post):
         'like_count': PostLikes.objects.filter(post=post).count(),  #post.like_count,
         'timestamp': post.timestamp,
         'pinned': post.pinned,
-        'comments': comments_to_json(post)
+        'comments': comments_to_json(post),
+        'video_id': post.video_id,
+        'thumbnail_link': post.thumbnail_link
     }
 
 
@@ -71,7 +75,7 @@ def user_to_json(user):
         'fName': user.first_name,
         'sName': user.last_name,
         'isSuperUser': user.is_superuser,
-        'isStaff': user.is_staff,
+        'isStaff': False if user.hidden else user.is_staff,
         'avatarURL': getUserAvatar(user.id)
     }
 
@@ -184,9 +188,6 @@ class LikeReply(APIView):
 # Post
 class NewPost(APIView):
 
-    # ignore empty text
-    # remove duplicate new lines
-
     def is_image_file(self, extension):
         extension = '.' + extension
         extension_list = Image.registered_extensions()
@@ -207,24 +208,54 @@ class NewPost(APIView):
         # fs.delete(file_name)
         return fs.save(file_name, request.FILES['image'])
 
+    def get_thumbnail(self, video_id):
+        v = vimeo.VimeoClient(
+            settings.VIMEO_KEYS['token'],
+            settings.VIMEO_KEYS['key'],
+            settings.VIMEO_KEYS['secret']
+        )
+        response = v.get('https://api.vimeo.com/videos/' + video_id + '/pictures')
+        decoded_response = response.json()
+        data = decoded_response['data']
+        thumbnail_data = self.get_active_thumbnail_data(data)
+        last = len(thumbnail_data['sizes']) - 1
+        return thumbnail_data['sizes'][last]['link']
+
+    def get_active_thumbnail_data(self, data):
+        for el in data:
+            if el['active']:
+                return el
+        raise Exception('no active thumbnail found...')
+
     def post(self, request):
         try:
-            file_name = ''
-            if 'image' in request.FILES:
-                file_name = self.store_post_image(request)
-
             content = request.data['post_text']
             content = content.strip()
             if content == "":
-                return Response({'errors': ['no post text entered']})
+                return Response({'errors': 'no post text entered'})
+            file_name = ''
+            thumbnail_link = ''
+            video_id = ''
+            if 'video_link' in request.data and request.data['video_link'] != '':
+                video_link = request.data['video_link']
+                split_str = video_link.split('/')
+                video_id = split_str[3]
+                try:
+                    thumbnail_link = self.get_thumbnail(video_id)
+                except Exception as e:
+                    logging.exception('link')
+                    return Response({'errors': 'Something went wrong adding the Vimeo video. Ensure you uploaded the correct link.'})
+            elif 'image' in request.FILES:
+                file_name = self.store_post_image(request)
 
             newPost = Post.objects.create(
                 user=request.user,
                 image_name=file_name,
                 content=content,
                 like_count=1,
+                video_id=video_id,
+                thumbnail_link=thumbnail_link,
             )
-            print(newPost)
 
             PostLikes.objects.create(user=request.user, post=newPost)
 
@@ -245,7 +276,7 @@ class NewPost(APIView):
             return Response({'success': 'true'})
         except Exception as e:
             logging.exception('NewPost')
-            return Response({'errors': 'request failed'})
+            return Response({'errors': 'Something went wrong while uploading post. Please try again.'})
 
 
 class NewPostComment(APIView):
@@ -359,15 +390,15 @@ class GetPostBeforeDateTime(APIView):
 class DeletePost(APIView):
 
     def post(self, request):
-        if not request.user.is_staff or not request.user.is_superuser:
-            return Response({'errors': 'you do not have permission to perform this action'})
 
         try:
-
-            post_id = request.data['post_id']
-            post = Post.objects.get(id=post_id)
-            post.delete()
-            return Response({'success': 'post deleted'})
+            if request.user.is_staff or request.user.is_superuser:
+                post_id = request.data['post_id']
+                post = Post.objects.get(id=post_id)
+                post.delete()
+                return Response({'success': 'post deleted'})
+            else:
+                return Response({'errors': 'you do not have permission to perform this action'})
         except Exception as e:
             logging.exception('DeletePost')
             return Response({'errors': 'request failed'})
@@ -376,19 +407,19 @@ class DeletePost(APIView):
 class PinPost(APIView):
 
     def post(self, request):
-        if not request.user.is_staff or not request.user.is_superuser:
-            return Response({'errors': 'you do not have permission to perform this action'})
 
         try:
-
-            post_id = request.data['post_id']
-            post = Post.objects.get(id=post_id)
-            if post.pinned:
-                post.pinned = False
+            if request.user.is_staff or request.user.is_superuser:
+                post_id = request.data['post_id']
+                post = Post.objects.get(id=post_id)
+                if post.pinned:
+                    post.pinned = False
+                else:
+                    post.pinned = True
+                post.save()
+                return Response({'post': post_to_json(post)})
             else:
-                post.pinned = True
-            post.save()
-            return Response({'post': post_to_json(post)})
+                return Response({'errors': 'you do not have permission to perform this action'})
         except Exception as e:
             logging.exception('PinPost')
             return Response({'errors': 'request failed'})

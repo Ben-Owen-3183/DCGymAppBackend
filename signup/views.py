@@ -136,8 +136,6 @@ class signup(APIView):
 
         if not errors['email'] and not errors['password'] and not errors['name']:
             user_is_member = member_status_checker.user_is_active_member(request.data['email'])
-            print('user_is_member: ' + str(user_is_member))
-            user_is_member = False
 
             if user_is_member:
                 hashed_password = make_password(request.data['password'], salt=None, hasher='default')

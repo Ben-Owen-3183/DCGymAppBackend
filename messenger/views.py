@@ -75,7 +75,7 @@ def user_row_to_json(user):
         'id': str(user.id),
         'fName': user.first_name,
         'sName': user.last_name,
-        'isSuperUser': user.is_superuser,
+        'isStaff': False if user.hidden else user.is_staff,
         'isStaff': user.is_staff,
         'avatarURL': getUserAvatar(user.id)
     }

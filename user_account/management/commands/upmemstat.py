@@ -90,7 +90,6 @@ class Command(BaseCommand):
     def gc_store_or_update_membership(self, data):
         try:
             members = MembershipStatus.objects.filter(api_type='go_cardless')
-
             members_to_create = []
             with transaction.atomic():
                 for api_member in data:
@@ -175,7 +174,6 @@ class Command(BaseCommand):
                         member.save()
                     # if member is not in system add them
                     else:
-                        print('created member')
                         members_to_create.append(
                             MembershipStatus(
                                 api_type='stripe',

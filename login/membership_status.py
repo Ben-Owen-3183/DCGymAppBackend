@@ -3,6 +3,7 @@ import logging
 import gocardless_pro
 import stripe
 from django.conf import settings
+from login.models import CustomUser
 
 class member_status_checker():
     """
@@ -91,6 +92,9 @@ class member_status_checker():
 
     def user_is_active_member(email):
         try:
+            user = CustomUser.objects.get(email=email);
+            if user.is_staff or user.is_superuser:
+                return True
             member_status = MembershipStatus.objects.get(email=email)
             if member_status.active:
                 return True

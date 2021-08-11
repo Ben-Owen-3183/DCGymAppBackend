@@ -11,6 +11,8 @@ class Post(models.Model):
     pinned_timed = models.BooleanField(default=False);
     pinned_time_days = models.IntegerField(default=0)
     timestamp = models.DateTimeField(auto_now=True)
+    thumbnail_link = models.TextField(max_length=250)
+    video_id = models.CharField(max_length=250)
 
 class PostComment(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
