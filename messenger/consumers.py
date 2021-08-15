@@ -40,7 +40,6 @@ class MessengerConsumer(WebsocketConsumer):
         pass
 
     def receive(self, text_data):
-        print(text_data)
         json_message = json.loads(text_data)
 
         action = json_message['action']
