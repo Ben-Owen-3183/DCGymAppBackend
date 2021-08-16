@@ -7,6 +7,7 @@ For more information on this file, see
 https://docs.djangoproject.com/en/3.1/howto/deployment/asgi/
 """
 
+django.setup()
 import os
 
 # from django.core.asgi import get_asgi_application
@@ -18,7 +19,7 @@ import django
 import messenger.routing
 
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'DCGymAppBackend.settings')
-django.setup()
+
 
 # application = get_asgi_application()
 
