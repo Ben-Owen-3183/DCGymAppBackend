@@ -9,6 +9,7 @@ https://docs.djangoproject.com/en/3.1/howto/deployment/asgi/
 
 import os
 import django
+os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'DCGymAppBackend.settings')
 django.setup()
 
 # from django.core.asgi import get_asgi_application
@@ -18,7 +19,6 @@ from channels.http import AsgiHandler
 
 import messenger.routing
 
-os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'DCGymAppBackend.settings')
 
 
 # application = get_asgi_application()
