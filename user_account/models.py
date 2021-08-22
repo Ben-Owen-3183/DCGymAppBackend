@@ -17,10 +17,10 @@ class PasswordResets(models.Model):
     locked = models.BooleanField()
 
 class MembershipStatus(models.Model):
-    email = models.CharField(max_length=150, unique=True)
-    customer = models.CharField(max_length=150)
-    mandate = models.CharField(max_length=150)
-    subscription = models.CharField(max_length=150)
+    customer_id = models.CharField(max_length=150, unique=True)
+    email = models.CharField(max_length=150)
+    mandate_id = models.CharField(max_length=150)
+    subscription_id = models.CharField(max_length=150)
     active = models.BooleanField()
 
     class API_type(models.TextChoices):
@@ -32,6 +32,40 @@ class MembershipStatus(models.Model):
         choices=API_type.choices,
         default=API_type.STRIPE,
     )
+
+    def __str__(self):
+        return self.email
+
+
+class MainJointAccount(models.Model):
+    main_joint_account = models.ForeignKey(
+        MembershipStatus,
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+    )
+
+    def __str__(self):
+        return self.main_joint_account.email
+
+class LinkedAccount(models.Model):
+    parent_account = models.ForeignKey(
+        MainJointAccount,
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+    )
+    child_account = models.ForeignKey(
+        MembershipStatus,
+        on_delete=models.CASCADE,
+        blank=False,
+        null=False,
+    )
+    def __str__(self):
+        return self.child_account.email
+
+
+
 
 
 
