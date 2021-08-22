@@ -17,13 +17,14 @@ class PasswordResets(models.Model):
     locked = models.BooleanField()
 
 class MembershipStatus(models.Model):
-    customer_id = models.CharField(max_length=150, unique=True)
+    customer_id = models.CharField(max_length=150, unique=True, null=True, blank=True)
     email = models.CharField(max_length=150)
-    mandate_id = models.CharField(max_length=150)
-    subscription_id = models.CharField(max_length=150)
-    active = models.BooleanField()
+    mandate_id = models.CharField(max_length=150, null=True, blank=True)
+    subscription_id = models.CharField(max_length=150, null=True, blank=True)
+    active = models.BooleanField(null=True, blank=True)
 
     class API_type(models.TextChoices):
+        NO_API = 'none'
         STRIPE = 'stripe'
         GO_CARDLESS = 'go_cardless'
 
