@@ -16,7 +16,6 @@ class LiveStreamAdmin(admin.ModelAdmin):
             'time_from',
             'time_to',
             'stream_url',
-            'chat_url',
         )}),
     )
 

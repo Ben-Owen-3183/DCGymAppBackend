@@ -34,17 +34,24 @@ class GetLiveStream(APIView):
                 'Sunday': [],
             }
             for stream in live_streams:
-                time_from = datetime.strptime(str(stream.time_from), "%H:%M:%S")
-                time_to = datetime.strptime(str(stream.time_to), "%H:%M:%S")
-                time_from_str = time_from.strftime("%-I:%M%p")
-                time_to_str = time_to.strftime("%-I:%M%p")
+                try:
+                    time_from = datetime.strptime(str(stream.time_from), "%H:%M:%S")
+                    time_to = datetime.strptime(str(stream.time_to), "%H:%M:%S")
+                    time_from_str = time_from.strftime("%-I:%M%p")
+                    time_to_str = time_to.strftime("%-I:%M%p")
 
-                stream_by_day[stream.day].append({
-                    'name': stream.name,
-                    'time': time_from_str + '-' + time_to_str,
-                    'stream_url': stream.stream_url,
-                    'chat_url': stream.chat_url,
-                })
+                    split_str = stream.stream_url.split('/')
+                    split_str[5] = 'chat'
+                    chat_url = '/'.join(split_str)
+
+                    stream_by_day[stream.day].append({
+                        'name': stream.name,
+                        'time': time_from_str + '-' + time_to_str,
+                        'stream_url': stream.stream_url,
+                        'chat_url': chat_url
+                    })
+                except Exception as e:
+                    pass 
             return Response({'streams_by_day': stream_by_day})
 
         except Exception as e:
