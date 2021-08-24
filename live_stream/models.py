@@ -40,3 +40,6 @@ class VimeoLiveStreams(models.Model):
         choices=Day.choices,
         default=Day.MONDAY,
     )
+
+    class Meta:
+        verbose_name_plural = "Vimeo Live Streams"

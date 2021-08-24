@@ -20,6 +20,7 @@ prompt = '[' + str(datetime.now()) + '] '
 
 linked_accounts = LinkedAccount.objects.all()
 members = MembershipStatus.objects.filter(api_type='go_cardless')
+manual_members = MembershipStatus.objects.filter(api_type='manual')
 
 class Command(BaseCommand):
 
@@ -109,7 +110,7 @@ class Command(BaseCommand):
                         member.save()
                     # if member is not in system add them
                     else:
-                        if customer.id in mandate_dict:
+                        if not self.member_exists_as_manual(customer) and customer.id in mandate_dict:
                             members_to_create.append(
                                 MembershipStatus(
                                     api_type='go_cardless',
@@ -132,6 +133,12 @@ class Command(BaseCommand):
             if member.customer_id == customer.id:
                 return member
         return None
+
+    def member_exists_as_manual(self, customer):
+        for member in manual_members:
+            if member.email == customer.email:
+                return True
+        return False
 
     """
     checks to see if none paying member is linked to a paying account

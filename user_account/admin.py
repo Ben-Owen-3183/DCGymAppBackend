@@ -2,6 +2,16 @@ from django.contrib import admin
 from .models import MembershipStatus
 from .models import MainJointAccount
 from .models import LinkedAccount
+from .models import PasswordResets
+
+# Register your models here.
+@admin.register(PasswordResets)
+class PasswordResetsAdmin(admin.ModelAdmin):
+    model = PasswordResets
+    list_display = ('email', 'locked', 'timestamp', 'user', )
+    list_filter = (['locked', ])
+    search_fields = ('email', 'locked', 'timestamp', 'user',)
+
 
 # Register your models here.
 @admin.register(MembershipStatus)
@@ -10,6 +20,7 @@ class MembershipStatusAdmin(admin.ModelAdmin):
     list_display = ('email', 'active', 'api_type', 'customer_id', 'mandate_id', 'subscription_id')
     list_filter = (['api_type', 'active', ])
     search_fields = ('email', 'active', 'api_type', 'customer_id', 'mandate_id', 'subscription_id')
+    change_list_template = 'admin/membership_status/membership_status_upload_members.html'
 
 
 # Register your models here.

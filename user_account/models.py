@@ -16,6 +16,10 @@ class PasswordResets(models.Model):
     timestamp = models.DateField()
     locked = models.BooleanField()
 
+    class Meta:
+        verbose_name_plural = "Password Resets"
+
+
 class MembershipStatus(models.Model):
     customer_id = models.CharField(max_length=150, unique=True, null=True, blank=True)
     email = models.CharField(max_length=150)
@@ -23,15 +27,17 @@ class MembershipStatus(models.Model):
     subscription_id = models.CharField(max_length=150, null=True, blank=True)
     active = models.BooleanField(null=True, blank=True)
 
+    class Meta:
+        verbose_name_plural = "Membership Status"
+
     class API_type(models.TextChoices):
-        NO_API = 'none'
-        STRIPE = 'stripe'
         GO_CARDLESS = 'go_cardless'
+        MANUAL = 'manual'
 
     api_type = models.CharField(
         max_length=20,
         choices=API_type.choices,
-        default=API_type.STRIPE,
+        default=API_type.MANUAL,
     )
 
     def __str__(self):
@@ -64,7 +70,6 @@ class LinkedAccount(models.Model):
     )
     def __str__(self):
         return self.child_account.email
-
 
 
 
