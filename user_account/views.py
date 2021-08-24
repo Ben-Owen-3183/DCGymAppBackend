@@ -78,64 +78,80 @@ class UploadUserData(View):
         return False
 
     def post(self, request):
-        csv_file = request.FILES['csv']
-        file = csv_file.read().decode('utf-8')
-        reader = csv.DictReader(io.StringIO(file))
+        try:
+            csv_file = request.FILES['csv']
+            file = csv_file.read().decode('utf-8')
+            reader = csv.DictReader(io.StringIO(file))
 
-        # Try activating in active gc accounts
-            # change api to manual
-        # try reactiving none active manual accounts
-        # remove active manual not on list
+            # Try activating in active gc accounts
+                # change api to manual
+            # try reactiving none active manual accounts
+            # remove active manual not on list
 
-        members_to_create = []
+            members_to_create = []
 
-        # Attempt to activate inactive members and attempt to deactivate active members
-        with transaction.atomic():
-            for row in reader:
-                email = row['Email Address']
-                if not self.is_already_paying(email):
-                    existing_member = self.get_existing_inactive_member(email)
-                    if existing_member == None:
-                        existing_member = self.get_existing_active_manual_member(email)
-                        if existing_member == None:
-                            print('creating: ' + email)
-                            members_to_create.append(
-                                MembershipStatus(
-                                    api_type='manual',
-                                    email=email,
-                                    active=True,
-                                )
-                            )
-                    elif existing_member.api_type == 'go_cardless' and not existing_member.active:
-                        existing_member.active = True
-                        existing_member.api_type = 'manual'
-                        existing_member.save()
-                    elif existing_member.api_type == 'manual' and not existing_member.active:
-                        existing_member.active = True
-                        existing_member.save()
+            num_updated = 0
+            num_created = 0
+
+            # Attempt to activate inactive members and attempt to deactivate active members
+            with transaction.atomic():
+                for row in reader:
+                    try:
+                        email = row['Email Address']
+                        if not self.is_already_paying(email):
+                            existing_member = self.get_existing_inactive_member(email)
+                            if existing_member == None:
+                                existing_member = self.get_existing_active_manual_member(email)
+                                if existing_member == None:
+                                    num_created += 1
+                                    members_to_create.append(
+                                        MembershipStatus(
+                                            api_type='manual',
+                                            email=email,
+                                            active=True,
+                                        )
+                                    )
+                            elif existing_member.api_type == 'go_cardless' and not existing_member.active:
+                                num_updated += 1
+                                existing_member.active = True
+                                existing_member.api_type = 'manual'
+                                existing_member.save()
+                            elif existing_member.api_type == 'manual' and not existing_member.active:
+                                num_updated += 1
+                                existing_member.active = True
+                                existing_member.save()
+                    except Exception as e:
+                        pass
+                for active_manual_member in self.active_manual_members:
+                    try:
+                        # reset the reader each time...
+                        if not self.member_exists_in_new_data(csv.DictReader(io.StringIO(file)), active_manual_member):
+                            num_updated += 1
+                            active_manual_member.active = False
+                            active_manual_member.save()
 
 
-            for active_manual_member in self.active_manual_members:
-                # reset the reader each time...
-                if not self.member_exists_in_new_data(csv.DictReader(io.StringIO(file)), active_manual_member):
-                    print('delete')
-                    active_manual_member.active = False
-                    active_manual_member.save()
+                    except Exception as e:
+                        pass
+            MembershipStatus.objects.bulk_create(members_to_create)
+            self.members_gc.update()
+            self.active_members_gc.update()
+            self.inactive_manual_members.update()
+            self.active_manual_members.update()
+        except Exception as e:
+            return HttpResponse('''
+                <p>No file uploaded or wrong format.</p>
+                <a href="''' + settings.SITE_URL + '''admin/user_account/membershipstatus/">Go back</a>
+            ''')
 
-        MembershipStatus.objects.bulk_create(members_to_create)
-        self.members_gc.update()
-        self.active_members_gc.update()
-        self.inactive_manual_members.update()
-        self.active_manual_members.update()
-        print('\n\n!!!! DONE')
-        """
 
         return HttpResponse('''
-            <p>No file uploaded or wrong format.</p>
+            <p>File Uploaded successfully: </p>
+            <p>new members created: ''' + str(num_created) +  '''</p>
+            <p>existing members updated: ''' + str(num_updated) +  '''</p>
+            <br>
             <a href="''' + settings.SITE_URL + '''admin/user_account/membershipstatus/">Go back</a>
         ''')
-        """
-        return HttpResponseRedirect('/admin/user_account/membershipstatus/')
 
 
     def member_exists_in_new_data(self, reader, member):
