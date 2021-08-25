@@ -283,7 +283,7 @@ class NewPostComment(APIView):
 
     def post(self, request):
         try:
-            text = request.data['text']
+            text = request.data['text'].strip()
             post_id = request.data['post_id']
             post = Post.objects.get(id=post_id)
             comment = PostComment.objects.create(
@@ -302,7 +302,7 @@ class NewCommentReply(APIView):
 
     def post(self, request):
         try:
-            text = request.data['text']
+            text = request.data['text'].strip()
             post_id = request.data['post_id']
             comment_id = request.data['comment_id']
             post = Post.objects.get(id=post_id)

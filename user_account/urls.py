@@ -8,4 +8,5 @@ urlpatterns = [
     path('password/reset/<int:id>/<uuid:token>', views.ConfirmPassReset.as_view()),
     path('search/', views.UserSearch.as_view()),
     path('list_staff/', views.GetStaff.as_view()),
+    path('upload_user_data/', views.UploadUserData.as_view()),
 ]

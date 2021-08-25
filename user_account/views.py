@@ -1,7 +1,7 @@
 from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
-from user_account.models import UserAvatar, PasswordResets
+from user_account.models import UserAvatar, PasswordResets, MembershipStatus
 from login.models import CustomUser
 # from django.core.files.base import ContentFile
 from django.core.files.storage import FileSystemStorage
@@ -12,14 +12,15 @@ from datetime import date
 from django.conf import settings
 from django.utils.html import strip_tags
 from django.core.mail import BadHeaderError, send_mail, EmailMultiAlternatives
-from django.http import HttpResponse
+from django.http import HttpResponse, HttpResponseRedirect
 from django.views import View
 from django.template.loader import render_to_string
 from django.contrib.postgres.search import TrigramSimilarity
 from django.contrib.postgres.search import SearchVector, SearchQuery, SearchRank
+import csv
+import io
+from django.db import transaction
 
-
-# Generic Functions
 
 def getUserAvatar(user_id):
     try:
@@ -45,6 +46,120 @@ class UserAccount(APIView):
     Validate names
     """
 
+
+class UploadUserData(View):
+    members_gc = MembershipStatus.objects.filter(api_type='go_cardless', active=False)
+    active_members_gc = MembershipStatus.objects.filter(api_type='go_cardless', active=True)
+    inactive_manual_members = MembershipStatus.objects.filter(api_type='manual', active=False)
+    active_manual_members = MembershipStatus.objects.filter(api_type='manual', active=True)
+
+
+    def get_existing_inactive_member(self, email):
+        for member in self.inactive_manual_members:
+            if member.email == email:
+                return member
+        for member in self.members_gc:
+            if member.email == email:
+                return member
+        return None
+
+
+    def get_existing_active_manual_member(self, email):
+        for member in self.active_manual_members:
+            if member.email == email:
+                return member
+        return None
+
+
+    def is_already_paying(self, email):
+        for member in self.active_members_gc:
+            if member.email == email:
+                return True
+        return False
+
+    def post(self, request):
+        try:
+            csv_file = request.FILES['csv']
+            file = csv_file.read().decode('utf-8')
+            reader = csv.DictReader(io.StringIO(file))
+
+            # Try activating in active gc accounts
+                # change api to manual
+            # try reactiving none active manual accounts
+            # remove active manual not on list
+
+            members_to_create = []
+
+            num_updated = 0
+            num_created = 0
+
+            # Attempt to activate inactive members and attempt to deactivate active members
+            with transaction.atomic():
+                for row in reader:
+                    try:
+                        email = row['Email Address']
+                        if not self.is_already_paying(email):
+                            existing_member = self.get_existing_inactive_member(email)
+                            if existing_member == None:
+                                existing_member = self.get_existing_active_manual_member(email)
+                                if existing_member == None:
+                                    num_created += 1
+                                    members_to_create.append(
+                                        MembershipStatus(
+                                            api_type='manual',
+                                            email=email,
+                                            active=True,
+                                        )
+                                    )
+                            elif existing_member.api_type == 'go_cardless' and not existing_member.active:
+                                num_updated += 1
+                                existing_member.active = True
+                                existing_member.api_type = 'manual'
+                                existing_member.save()
+                            elif existing_member.api_type == 'manual' and not existing_member.active:
+                                num_updated += 1
+                                existing_member.active = True
+                                existing_member.save()
+                    except Exception as e:
+                        pass
+                for active_manual_member in self.active_manual_members:
+                    try:
+                        # reset the reader each time...
+                        if not self.member_exists_in_new_data(csv.DictReader(io.StringIO(file)), active_manual_member):
+                            num_updated += 1
+                            active_manual_member.active = False
+                            active_manual_member.save()
+
+
+                    except Exception as e:
+                        pass
+            MembershipStatus.objects.bulk_create(members_to_create)
+            self.members_gc.update()
+            self.active_members_gc.update()
+            self.inactive_manual_members.update()
+            self.active_manual_members.update()
+        except Exception as e:
+            return HttpResponse('''
+                <p>No file uploaded or wrong format.</p>
+                <a href="''' + settings.SITE_URL + '''admin/user_account/membershipstatus/">Go back</a>
+            ''')
+
+
+        return HttpResponse('''
+            <p>File Uploaded successfully: </p>
+            <p>new members created: ''' + str(num_created) +  '''</p>
+            <p>existing members updated: ''' + str(num_updated) +  '''</p>
+            <br>
+            <a href="''' + settings.SITE_URL + '''admin/user_account/membershipstatus/">Go back</a>
+        ''')
+
+
+    def member_exists_in_new_data(self, reader, member):
+        for row in reader:
+            email = row['Email Address']
+            if email == member.email:
+                return True
+        return False
 
 class GetStaff(APIView):
 

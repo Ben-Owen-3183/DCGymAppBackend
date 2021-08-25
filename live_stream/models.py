@@ -22,7 +22,6 @@ class VimeoVideos(models.Model):
 class VimeoLiveStreams(models.Model):
     name = models.CharField(max_length=250)
     stream_url = models.TextField(max_length=250)
-    chat_url = models.TextField(max_length=250)
     time_from = models.TimeField(max_length=50)
     time_to = models.TimeField(max_length=50)
 
@@ -40,3 +39,6 @@ class VimeoLiveStreams(models.Model):
         choices=Day.choices,
         default=Day.MONDAY,
     )
+
+    class Meta:
+        verbose_name_plural = "Vimeo Live Streams"

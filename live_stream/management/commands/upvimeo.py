@@ -27,8 +27,8 @@ class Command(BaseCommand):
     def fetch_and_store_videos(self):
         response = v.get('https://api.vimeo.com/me/videos')
         decoded_response = response.json()
-        current_datetime = datetime.now(tz=timezone.utc)
         videos_to_create = []
+        current_datetime = datetime.now(tz=timezone.utc)
 
         with transaction.atomic():
             for video in decoded_response['data']:
@@ -59,10 +59,10 @@ class Command(BaseCommand):
                             upload_date=video['release_time']
                         ))
                     else:
-                        stored_video.last_updated(current_datetime)
+                        stored_video.last_updated = current_datetime
+                        stored_video.save()
                 except Exception as e:
-                    pass
-                    # logging.exception('vimeo')
+                    logging.exception('vimeo')
         VimeoVideos.objects.bulk_create(videos_to_create)
         all_videos.update()
         current_datetime = current_datetime - timedelta(minutes=1)
