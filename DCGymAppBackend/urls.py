@@ -27,4 +27,5 @@ urlpatterns = [
     path('feed/', include('feed.urls')),
     path('timetable/', include('timetable.urls')),
     path('video/', include('live_stream.urls')),
+    path('policies/', include('policies.urls')),
 ] + static(settings.MEDIA_URL, document_root = settings.MEDIA_ROOT)
