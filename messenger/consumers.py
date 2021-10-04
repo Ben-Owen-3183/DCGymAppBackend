@@ -9,6 +9,8 @@ from user_account.models import UserAvatar
 from django.db.models import Q
 from datetime import datetime
 import logging
+from firebase_admin.messaging import Message, Notification
+from fcm_django.models import FCMDevice
 
 
 def user_row_to_json(user):
@@ -174,7 +176,22 @@ class MessengerConsumer(WebsocketConsumer):
                 message=data['message'],
             )
 
-
+            try:
+                pn_message = Message(
+                    notification=Notification(
+                        title="New message from " + user.first_name + ' ' + user.last_name, 
+                        body=data['message'],
+                        
+                    ),
+                    data={
+                        'type': 'message',
+                        'chat_id': data['chat_id'],
+                    }
+                )
+                devices = FCMDevice.objects.filter(user_id=other_user_chat.user)
+                response = devices.send_message(pn_message)
+            except:
+                print('push notifications failed')
 
             self.notify_chat(
                 str(chat.id),
@@ -202,6 +219,7 @@ class MessengerConsumer(WebsocketConsumer):
             )
         except Exception as e:
             logging.exception('New Message')
+
 
     def notify_chat(self, group_name, data):
         async_to_sync(self.channel_layer.group_send)(

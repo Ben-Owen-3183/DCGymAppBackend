@@ -13,6 +13,8 @@ from django.core.files.storage import FileSystemStorage
 from datetime import date
 from django.conf import settings
 import vimeo
+from firebase_admin.messaging import Message, Notification
+from fcm_django.models import FCMDevice
 
 # number of posts to be returned by default
 POST_AMOUNT = 5
@@ -227,6 +229,25 @@ class NewPost(APIView):
                 return el
         raise Exception('no active thumbnail found...')
 
+
+    def notify_users_of_post(self, text, image_url, user, using_vimeo_thumbnail):
+        try:
+            if not using_vimeo_thumbnail:
+                image_url = settings.SITE_URL + 'media/post_images/' + image_url
+            message = Message(
+                notification=Notification(
+                    title="New post from " + user.first_name + ' ' + user.last_name, 
+                    body=text, 
+                    image=image_url
+                ),
+                data={'type': 'feed'}
+            )
+            devices = FCMDevice.objects.all()
+            response = devices.send_message(message)
+        except:
+           print('push notifications failed')
+
+
     def post(self, request):
         try:
             content = request.data['post_text']
@@ -268,6 +289,13 @@ class NewPost(APIView):
 
             if  request.user.is_staff or request.user.is_superuser:
                 newPost.pinned = admin_options['pin_post']
+                if admin_options['notify']:
+                    self.notify_users_of_post(
+                        newPost.content, 
+                        newPost.image_name if newPost.image_name else newPost.thumbnail_link,
+                        request.user,
+                        using_vimeo_thumbnail=(not newPost.image_name)
+                    )
                 if admin_options['pin_post_time_limit']:
                     newPost.pinned_time_days = True
                     newPost.pinned_time_days = admin_options['pin_post_days']

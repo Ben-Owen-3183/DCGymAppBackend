@@ -6,6 +6,7 @@ from user_account.models import UserAvatar
 from .membership_status import member_status_checker
 from rest_framework.views import APIView
 from login.models import CustomUser
+from user_account.models import UserDeviceID
 import logging
 
 class userData(APIView):
@@ -41,6 +42,7 @@ class userData(APIView):
 
 class login(ObtainAuthToken):
     permission_classes = [AllowAny]
+
 
     def post(self, request, *args, **kwargs):
         request.data['username'] = request.data['username'].lower()

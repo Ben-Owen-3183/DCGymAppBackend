@@ -73,8 +73,19 @@ class LinkedAccount(models.Model):
 
 
 
+class UserDeviceID(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    device_id = models.CharField(max_length=250, null=False, blank=False)
 
+    class Device_Type(models.TextChoices):
+        IOS = 'ios'
+        ANDROID = 'android'
 
+    device_type = models.CharField(
+        max_length=20,
+        choices=Device_Type.choices,
+        default=Device_Type.ANDROID,
+    )
 
 
 
