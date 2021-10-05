@@ -191,7 +191,7 @@ class MessengerConsumer(WebsocketConsumer):
                 devices = FCMDevice.objects.filter(user_id=other_user_chat.user)
                 response = devices.send_message(pn_message)
             except:
-                print('push notifications failed')
+                print('Messenger: push notifications failed')
 
             self.notify_chat(
                 str(chat.id),
