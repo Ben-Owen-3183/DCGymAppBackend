@@ -245,7 +245,7 @@ class NewPost(APIView):
             devices = FCMDevice.objects.all()
             response = devices.send_message(message)
         except:
-           print('push notifications failed')
+           print('Feed: push notifications failed')
 
 
     def post(self, request):

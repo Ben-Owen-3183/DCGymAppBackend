@@ -9,6 +9,7 @@ from datetime import datetime
 from user_account.models import UserAvatar
 from django.core.paginator import Paginator
 from django.db.models import Exists
+
 import logging
 
 def get_messages(chat_id):
@@ -57,17 +58,30 @@ def get_messages_after_message_datetime(chat_id, msg_datetime, msg_id):
 
 
 def get_chat_data(user, chat_id):
-    user_chat = ChatUser.objects.get(subscribed_chat=chat_id, user=user)
-    other_user_chat = ChatUser.objects.get(
-        Q(subscribed_chat=chat_id)
-        & ~Q(user=user)
-    )
-    return {
-        'id': str(chat_id),
-        'read': user_chat.read,
-        'messages': get_messages(chat_id),
-        'other_user_data': user_row_to_json(other_user_chat.user)
-    }
+    try:
+        user_chat = ChatUser.objects.get(subscribed_chat=chat_id, user=user)
+        other_user_chat = None
+        try:
+            other_user_chat = ChatUser.objects.get(
+                Q(subscribed_chat=chat_id)
+                & ~Q(user=user)
+            )
+        except ChatUser.DoesNotExist:
+            # Deletes zombie chat caused by not exist other_user_chat 
+            user_chat.delete()
+            Chat.objects.get(id=chat_id).delete()
+            Messages.objects.filter(chat_id=chat_id).delete()
+            return None
+
+        return {
+            'id': str(chat_id),
+            'read': user_chat.read,
+            'messages': get_messages(chat_id),
+            'other_user_data': user_row_to_json(other_user_chat.user)
+        }
+    except:
+        return None
+
 
 
 def user_row_to_json(user):
@@ -256,7 +270,7 @@ class SyncChats(APIView):
                         response['new_chat_messages'].append(new_messages_data)
                 else:
                     new_chat = get_chat_data(request.user, chat_id)
-                    if len(new_chat['messages']) > 0:
+                    if new_chat != None and len(new_chat['messages']) > 0:
                         response['new_chats'].append(new_chat)
 
             return Response(response)

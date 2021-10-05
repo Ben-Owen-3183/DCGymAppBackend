@@ -11,14 +11,9 @@ class Command(BaseCommand):
         message = Message(
             notification=Notification(title="title", body="text", image="https://pixy.org/src/21/219269.jpg"),
         )
-
         devices = FCMDevice.objects.all().first()
-
-        
         response = devices.send_message(message)
-        print(response)
-        for property, value in vars(response).items():
-            print(property, ":", value)
+
         try:
             pass
             # print('success')
