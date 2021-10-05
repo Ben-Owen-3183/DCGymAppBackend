@@ -176,22 +176,22 @@ class MessengerConsumer(WebsocketConsumer):
                 message=data['message'],
             )
 
-            try:
-                pn_message = Message(
-                    notification=Notification(
-                        title="New message from " + user.first_name + ' ' + user.last_name, 
-                        body=data['message'],
-                        
-                    ),
-                    data={
-                        'type': 'message',
-                        'chat_id': data['chat_id'],
-                    }
-                )
-                devices = FCMDevice.objects.filter(user_id=other_user_chat.user)
-                response = devices.send_message(pn_message)
-            except:
-                print('Messenger: push notifications failed')
+            #try:
+            pn_message = Message(
+                notification=Notification(
+                    title="New message from " + user.first_name + ' ' + user.last_name, 
+                    body=data['message'],
+                    
+                ),
+                data={
+                    'type': 'message',
+                    'chat_id': data['chat_id'],
+                }
+            )
+            devices = FCMDevice.objects.filter(user_id=other_user_chat.user)
+            response = devices.send_message(pn_message)
+            #except:
+             #   print('Messenger: push notifications failed')
 
             self.notify_chat(
                 str(chat.id),
