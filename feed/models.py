@@ -1,18 +1,26 @@
 from django.db import models
 from login.models import CustomUser
 
+
 # Create your models here.
 class Post(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
     image_name = models.CharField(max_length=150)
     content = models.CharField(max_length=2000, null=True)
     like_count = models.IntegerField(default=0)
-    pinned = models.BooleanField(default=False);
-    pinned_timed = models.BooleanField(default=False);
+    pinned = models.BooleanField(default=False)
+    pinned_timed = models.BooleanField(default=False)
     pinned_time_days = models.IntegerField(default=0)
     timestamp = models.DateTimeField(auto_now=True)
     thumbnail_link = models.TextField(max_length=250)
     video_id = models.CharField(max_length=250)
+    pinned_timed = models.BooleanField(default=False)
+
+
+class PostsToNotify(models.Model):
+    post = models.ForeignKey(Post, on_delete=models.CASCADE)
+    notification_sent = models.BooleanField(default=False)
+
 
 class PostComment(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
@@ -20,6 +28,7 @@ class PostComment(models.Model):
     text = models.CharField(max_length=1000)
     like_count = models.IntegerField(default=0)
     timestamp = models.DateTimeField(auto_now=True)
+
 
 class CommentReplies(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
@@ -47,6 +56,7 @@ class PostLikes(models.Model):
     class Meta:
         unique_together = ('user', 'post',)
 
+
 class PostCommentLikes(models.Model):
     user = models.ForeignKey(
         CustomUser,
@@ -64,6 +74,7 @@ class PostCommentLikes(models.Model):
     class Meta:
         unique_together = ('user', 'post_comment',)
 
+
 class ReplyReplyLikes(models.Model):
     user = models.ForeignKey(
         CustomUser,
@@ -80,6 +91,8 @@ class ReplyReplyLikes(models.Model):
 
     class Meta:
         unique_together = ('user', 'comment_reply',)
+
+
 
 
 

@@ -1,5 +1,5 @@
 from rest_framework.views import APIView
-from feed.models import Post, ReplyReplyLikes, CommentReplies, PostCommentLikes, PostComment, PostLikes
+from feed.models import Post, PostsToNotify, ReplyReplyLikes, CommentReplies, PostCommentLikes, PostComment, PostLikes
 import logging
 from user_account.models import UserAvatar
 from login.models import CustomUser
@@ -230,22 +230,7 @@ class NewPost(APIView):
         raise Exception('no active thumbnail found...')
 
 
-    def notify_users_of_post(self, text, image_url, user, using_vimeo_thumbnail):
-        try:
-            if not using_vimeo_thumbnail:
-                image_url = settings.SITE_URL + 'media/post_images/' + image_url
-            message = Message(
-                notification=Notification(
-                    title="New post from " + user.first_name + ' ' + user.last_name, 
-                    body=text, 
-                    image=image_url
-                ),
-                data={'type': 'feed'}
-            )
-            devices = FCMDevice.objects.all()
-            response = devices.send_message(message)
-        except:
-           print('Feed: push notifications failed')
+
 
 
     def post(self, request):
@@ -290,12 +275,8 @@ class NewPost(APIView):
             if  request.user.is_staff or request.user.is_superuser:
                 newPost.pinned = admin_options['pin_post']
                 if admin_options['notify']:
-                    self.notify_users_of_post(
-                        newPost.content, 
-                        newPost.image_name if newPost.image_name else newPost.thumbnail_link,
-                        request.user,
-                        using_vimeo_thumbnail=(not newPost.image_name)
-                    )
+                    newPost.save()
+                    PostsToNotify.objects.create(post=newPost)
                 if admin_options['pin_post_time_limit']:
                     newPost.pinned_time_days = True
                     newPost.pinned_time_days = admin_options['pin_post_days']
