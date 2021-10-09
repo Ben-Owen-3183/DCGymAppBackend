@@ -5,6 +5,7 @@ from feed.models import Post, PostsToNotify
 from django.conf import settings
 from datetime import datetime
 from django.db.models import Q
+import logging
 
 prompt = '[' + str(datetime.now()) + '] '
 
@@ -13,6 +14,7 @@ class Command(BaseCommand):
     # Sends notifications of feed
     def handle(self, *args, **options):
         posts_to_notify = PostsToNotify.objects.filter(notification_sent=False)
+
         count_to_send = len(posts_to_notify)
         count_sent = 0
 
@@ -29,7 +31,6 @@ class Command(BaseCommand):
     
 
     def notify_users_of_post(self, post_to_notify):
-       
         post = Post.objects.get(id=post_to_notify.post.id)
         
         try:
@@ -49,5 +50,6 @@ class Command(BaseCommand):
             )
             FCMDevice.objects.filter(~Q(user=post.user)).send_message(message)
             return True
-        except:
+        except Exception as e:
+            # logging.exception('NewPost')
             return False

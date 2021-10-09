@@ -9,9 +9,12 @@ class member_status_checker():
 
     def user_is_active_member(email):
         try:
-            user = CustomUser.objects.get(email=email);
-            if user.is_staff or user.is_superuser:
-                return True
+            try:
+                user = CustomUser.objects.get(email=email);
+                if user.is_staff or user.is_superuser:
+                    return True
+            except:
+                pass
 
             member_status = MembershipStatus.objects.filter(email=email)
             length = len(member_status)
