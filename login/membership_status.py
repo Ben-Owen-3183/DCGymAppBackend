@@ -18,15 +18,15 @@ class member_status_checker():
 
             member_status = MembershipStatus.objects.filter(email=email)
             length = len(member_status)
+            
             if length == 0:
                 return False
             elif length == 1:
                 return member_status[0].active
             else:
                 for member_instance in member_status:
-                    if member_status.active == True:
+                    if member_instance.active == True:
                         return True
             return False
-
         except Exception as e:
             return False
