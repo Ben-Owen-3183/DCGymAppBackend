@@ -123,14 +123,14 @@ class UploadUserData(View):
                     except Exception as e:
                         pass
                 for active_manual_member in self.active_manual_members:
+                    
                     try:
-                        # reset the reader each time...
-                        if not self.member_exists_in_new_data(csv.DictReader(io.StringIO(file)), active_manual_member):
-                            num_updated += 1
-                            active_manual_member.active = False
-                            active_manual_member.save()
-
-
+                        if not active_manual_member.force_active:
+                            # reset the reader each time...
+                            if not self.member_exists_in_new_data(csv.DictReader(io.StringIO(file)), active_manual_member):
+                                num_updated += 1
+                                active_manual_member.active = False
+                                active_manual_member.save()
                     except Exception as e:
                         pass
             MembershipStatus.objects.bulk_create(members_to_create)

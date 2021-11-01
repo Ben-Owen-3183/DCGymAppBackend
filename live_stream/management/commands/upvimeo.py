@@ -56,7 +56,7 @@ class Command(BaseCommand):
                             video_url=video['link'],
                             thumbnail_link=self.get_thumbnail_link(video['pictures']['sizes']),
                             last_updated=current_datetime,
-                            upload_date=video['release_time']
+                            upload_date=current_datetime
                         ))
                     else:
                         stored_video.last_updated = current_datetime
@@ -68,6 +68,7 @@ class Command(BaseCommand):
         current_datetime = current_datetime - timedelta(minutes=1)
         current_datetime.replace(day=1)
         response = VimeoVideos.objects.filter(last_updated__range=['1066-10-14T13:47:23Z', current_datetime]).delete()
+
 
     def video_exists(self, id):
         for video in all_videos:

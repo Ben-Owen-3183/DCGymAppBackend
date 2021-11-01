@@ -15,6 +15,7 @@ from django.conf import settings
 import vimeo
 from firebase_admin.messaging import Message, Notification
 from fcm_django.models import FCMDevice
+from django.utils import timezone
 
 # number of posts to be returned by default
 POST_AMOUNT = 5
@@ -198,6 +199,7 @@ class NewPost(APIView):
                 return True
         return False
 
+
     def store_post_image(self, request):
         content_type = request.FILES['image'].content_type
         file_extension = content_type.split('/')[1]
@@ -209,6 +211,7 @@ class NewPost(APIView):
         fs = FileSystemStorage('media/post_images')
         # fs.delete(file_name)
         return fs.save(file_name, request.FILES['image'])
+
 
     def get_thumbnail(self, video_id):
         v = vimeo.VimeoClient(
@@ -223,14 +226,12 @@ class NewPost(APIView):
         last = len(thumbnail_data['sizes']) - 1
         return thumbnail_data['sizes'][last]['link']
 
+
     def get_active_thumbnail_data(self, data):
         for el in data:
             if el['active']:
                 return el
         raise Exception('no active thumbnail found...')
-
-
-
 
 
     def post(self, request):
@@ -261,6 +262,8 @@ class NewPost(APIView):
                 like_count=1,
                 video_id=video_id,
                 thumbnail_link=thumbnail_link,
+                time_posted=datetime.now(),
+                timestamp = datetime.now(tz=timezone.utc)
             )
 
             PostLikes.objects.create(user=request.user, post=newPost)

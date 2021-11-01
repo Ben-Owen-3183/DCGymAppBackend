@@ -15,3 +15,9 @@ printf "\n"
 # cronjobs
 # 5 * * * * python3 -W ignore /path/to/app/manage.py upvimeo >> /path/to/DCGymAppBackend/live_stream/management/commands/logs.txt
 # 2 * * * * python3 -W ignore /path/to/app/manage.py upmemstat >> /path/to/DCGymAppBackend/user_account/management/commands/logs.txt
+
+
+
+#
+# sudo docker run -p 6379:6379 -d redis:5
+#
