@@ -26,7 +26,7 @@ class MembershipStatus(models.Model):
     mandate_id = models.CharField(max_length=150, null=True, blank=True)
     subscription_id = models.CharField(max_length=150, null=True, blank=True)
     active = models.BooleanField(null=True, blank=True)
-    force_active = models.BooleanField(null=True, blank=True)
+    force_active = models.BooleanField(default=False)
 
     class Meta:
         verbose_name_plural = "Membership Status"
