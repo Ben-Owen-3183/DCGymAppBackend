@@ -59,6 +59,7 @@ class Command(BaseCommand):
                             upload_date=current_datetime
                         ))
                     else:
+                        stored_video.name = video['name']                    
                         stored_video.last_updated = current_datetime
                         stored_video.save()
                 except Exception as e:
