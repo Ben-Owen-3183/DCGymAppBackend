@@ -93,10 +93,11 @@ class Command(BaseCommand):
         try:
             for video in videos:
                 try:
-                    response = v.patch('/videos/{video.vimeo_id}', data={'privacy': {'view': 'disable'}}) 
+                    response = v.patch('/videos/' + video.vimeo_id, data={'privacy': {'view': 'disable'}}) 
                 except:
                     print(prompt + 'failed to set privacy for video ' + video.name)
         except:
+            print(prompt + 'set_videos_privacy() failed')
             return
 
 
