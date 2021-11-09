@@ -22,6 +22,7 @@ prompt = '[' + str(datetime.now(tz=timezone.utc)) + '] '
 all_videos = VimeoVideos.objects.all()
 
 
+
 class Command(BaseCommand):
 
     def fetch_and_store_videos(self):
@@ -54,16 +55,18 @@ class Command(BaseCommand):
                             vimeo_id=video_id,
                             name=video['name'],
                             video_url=video['link'],
-                            thumbnail_link=self.get_thumbnail_link(video['pictures']['sizes']),
+                            thumbnail_link=self.get_thumbnail_link(video['pictures']['sizes']) + '?type' + str(datetime.now(tz=timezone.utc)),
                             last_updated=current_datetime,
                             upload_date=current_datetime
                         ))
                     else:
                         stored_video.name = video['name']                    
                         stored_video.last_updated = current_datetime
+                        stored_video.thumbnail_link = self.get_thumbnail_link(video['pictures']['sizes']) + '?type' + str(datetime.now(tz=timezone.utc))
                         stored_video.save()
                 except Exception as e:
                     logging.exception('vimeo')
+        self.set_videos_privacy(videos_to_create)
         VimeoVideos.objects.bulk_create(videos_to_create)
         all_videos.update()
         current_datetime = current_datetime - timedelta(minutes=1)
@@ -76,6 +79,25 @@ class Command(BaseCommand):
             if video.vimeo_id == id:
                 return video
         return None
+
+
+    def set_videos_privacy(self, videos):
+        """
+        Vimeo is broken and live stream created videos will not work as
+        embeded players in mobile webviews if privacy is set to private link.
+        This sets them to unlisted. Ignore the fact that disabled is used. 
+        Vimeo api also seems to treat private as unlisted and unlisted as private.
+        Api also confusing as it uses different words from the UI. 
+        Change at your own risk. 
+        """
+        try:
+            for video in videos:
+                try:
+                    response = v.patch('/videos/{video.vimeo_id}', data={'privacy': {'view': 'disable'}}) 
+                except:
+                    print(prompt + 'failed to set privacy for video ' + video.name)
+        except:
+            return
 
 
     def get_thumbnail_link(self, data):
