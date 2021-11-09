@@ -55,14 +55,14 @@ class Command(BaseCommand):
                             vimeo_id=video_id,
                             name=video['name'],
                             video_url=video['link'],
-                            thumbnail_link=self.get_thumbnail_link(video['pictures']['sizes']) + '?type' + str(datetime.now(tz=timezone.utc)),
+                            thumbnail_link=self.get_thumbnail_link(video['pictures']['sizes']),
                             last_updated=current_datetime,
                             upload_date=current_datetime
                         ))
                     else:
                         stored_video.name = video['name']                    
                         stored_video.last_updated = current_datetime
-                        stored_video.thumbnail_link = self.get_thumbnail_link(video['pictures']['sizes']) + '?type' + str(datetime.now(tz=timezone.utc))
+                        stored_video.thumbnail_link = self.get_thumbnail_link(video['pictures']['sizes'])
                         stored_video.save()
                 except Exception as e:
                     logging.exception('vimeo')
