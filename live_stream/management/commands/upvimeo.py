@@ -26,13 +26,40 @@ all_videos = VimeoVideos.objects.all()
 class Command(BaseCommand):
 
     def fetch_and_store_videos(self):
-        response = v.get('https://api.vimeo.com/me/videos')
-        decoded_response = response.json()
-        videos_to_create = []
         current_datetime = datetime.now(tz=timezone.utc)
+        decoded_video_data = []
+        current_page = 1
+
+        response = self.fetch_videos(current_page)
+        decoded_response = response.json()
+        decoded_video_data = decoded_video_data + decoded_response['data']
+
+        while decoded_response['paging']['next'] != None:
+            current_page += 1
+            response = self.fetch_videos(current_page)
+            decoded_response = response.json()
+            decoded_video_data = decoded_video_data + decoded_response['data']
+
+
+        self.process_and_store_videos(
+            videos=decoded_video_data, 
+            current_datetime=current_datetime
+        )
+
+        
+    def fetch_videos(self, current_page):
+        response = v.get('https://api.vimeo.com/me/videos', params={
+            'page': current_page,
+            'per_page': 25
+        })
+        return response
+
+
+    def process_and_store_videos(self, videos, current_datetime):
+        videos_to_create = []
 
         with transaction.atomic():
-            for video in decoded_response['data']:
+            for video in videos:
                 try:
                     video_id = video['uri'].split('/')[2]
                     stored_video = self.video_exists(video_id)
@@ -65,7 +92,9 @@ class Command(BaseCommand):
                         stored_video.thumbnail_link = self.get_thumbnail_link(video['pictures']['sizes'])
                         stored_video.save()
                 except Exception as e:
-                    logging.exception('vimeo')
+                    if settings.DEBUG == True:
+                        logging.exception('vimeo')
+                    
         self.set_videos_privacy(videos_to_create)
         VimeoVideos.objects.bulk_create(videos_to_create)
         all_videos.update()
@@ -104,7 +133,7 @@ class Command(BaseCommand):
     def get_thumbnail_link(self, data):
         current_link = data[0]['link_with_play_button']
         for files in data:
-            if files['width'] == 1920:
+            if files['width'] == 960:
                 return files['link_with_play_button']
             else:
                 current_link = files['link_with_play_button']
