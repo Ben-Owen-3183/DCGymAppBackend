@@ -133,7 +133,6 @@ class Command(BaseCommand):
     def get_thumbnail_link(self, data):
         current_link = data[0]['link_with_play_button']
         for files in data:
-            print(files['width'])
             if files['width'] == 640:
                 return files['link_with_play_button']
             else:
