@@ -11,6 +11,7 @@ def video_row_to_json(videos):
     for video in videos:
         json_videos.append({
             'id': video.vimeo_id,
+            'db_id': video.id,
             'name': video.name,
             'file': video.video_url,
             'thumbnail': video.thumbnail_link,
