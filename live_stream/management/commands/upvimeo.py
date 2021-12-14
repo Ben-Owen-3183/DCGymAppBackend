@@ -50,7 +50,7 @@ class Command(BaseCommand):
     def fetch_videos(self, current_page):
         response = v.get('https://api.vimeo.com/me/videos', params={
             'page': current_page,
-            'per_page': 25
+            'per_page': 100
         })
         return response
 

@@ -69,7 +69,7 @@ class GetVideos(APIView):
             page_number = request.data['page_number']
             if page_length > self.max_page_size:
                 page_length = self.max_page_size
-            pages = Paginator(VimeoVideos.objects.filter(type='OldStream').order_by('-upload_date'), page_length)
+            pages = Paginator(VimeoVideos.objects.filter(type='OldStream').order_by('-upload_date').distinct(), page_length)
             if page_number > pages.num_pages:
                 return Response({'videos': []})
             videos = pages.page(page_number)
