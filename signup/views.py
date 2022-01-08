@@ -65,7 +65,6 @@ def notify_staff_user_is_awaiting_activation(name, id):
             try:
                 email = EmailMultiAlternatives(subject, body, email_from, [user.email])
                 email.attach_alternative(html_content, "text/html")
-                print("emailing " + user.email)
                 email.send()
             except BadHeaderError:
                 print('Invalid header found.')

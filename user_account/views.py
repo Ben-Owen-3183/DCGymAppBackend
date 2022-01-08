@@ -287,17 +287,17 @@ class ActivateAccount_Allow(View):
             return HttpResponse({'membership status does not exist. You need to create one to activate this user.'}) 
 
         user = CustomUser.objects.get(email=membership_status.email)
-        #try:
-        message = Message(
-            notification=Notification(
-                title="Account Activation", 
-                body="Hi " + user.first_name + ", your account has been activated and you can now login!", 
-            ),
-        )
-        devices = FCMDevice.objects.filter(user=user)
-        devices.send_message(message)
-        #except:
-        #    pass
+        try:
+            message = Message(
+                notification=Notification(
+                    title="Account Activation", 
+                    body="Hi " + user.first_name + ", your account has been activated and you can now login!", 
+                ),
+            )
+            devices = FCMDevice.objects.filter(user=user)
+            devices.send_message(message)
+        except:
+            pass
 
         subject = 'Account Activation'
         email_from = 'dcgymapp@gmail.com'
