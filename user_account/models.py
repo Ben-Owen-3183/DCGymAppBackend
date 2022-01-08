@@ -21,58 +21,14 @@ class PasswordResets(models.Model):
 
 
 class MembershipStatus(models.Model):
-    customer_id = models.CharField(max_length=150, unique=True, null=True, blank=True)
     email = models.CharField(max_length=150)
-    mandate_id = models.CharField(max_length=150, null=True, blank=True)
-    subscription_id = models.CharField(max_length=150, null=True, blank=True)
-    active = models.BooleanField(null=True, blank=True)
-    force_active = models.BooleanField(default=False)
+    active = models.BooleanField(null=False, blank=True)
 
     class Meta:
         verbose_name_plural = "Membership Status"
 
-    class API_type(models.TextChoices):
-        GO_CARDLESS = 'go_cardless'
-        MANUAL = 'manual'
-
-    api_type = models.CharField(
-        max_length=20,
-        choices=API_type.choices,
-        default=API_type.MANUAL,
-    )
-
     def __str__(self):
         return self.email
-
-
-class MainJointAccount(models.Model):
-    main_joint_account = models.ForeignKey(
-        MembershipStatus,
-        on_delete=models.CASCADE,
-        blank=False,
-        null=False,
-    )
-
-    def __str__(self):
-        return self.main_joint_account.email
-
-class LinkedAccount(models.Model):
-    parent_account = models.ForeignKey(
-        MainJointAccount,
-        on_delete=models.CASCADE,
-        blank=False,
-        null=False,
-    )
-    child_account = models.ForeignKey(
-        MembershipStatus,
-        on_delete=models.CASCADE,
-        blank=False,
-        null=False,
-    )
-    def __str__(self):
-        return self.child_account.email
-
-
 
 class UserDeviceID(models.Model):
     user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
@@ -88,7 +44,9 @@ class UserDeviceID(models.Model):
         default=Device_Type.ANDROID,
     )
 
+class AwaitingActivation(models.Model):
+    user = models.ForeignKey(CustomUser, on_delete=models.CASCADE)
+    email = models.CharField(max_length=150)
+    name = models.CharField(max_length=300)
 
 
-
-#

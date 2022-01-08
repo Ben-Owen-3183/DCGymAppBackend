@@ -8,6 +8,10 @@ from django.utils.html import strip_tags
 from django.contrib.auth import get_user_model
 from django.contrib.auth.hashers import make_password
 from django.conf import settings
+from user_account.models import AwaitingActivation, MembershipStatus
+
+from firebase_admin.messaging import Message, Notification
+from fcm_django.models import FCMDevice
 
 # DJANGO REST
 from rest_framework.response import Response
@@ -24,6 +28,52 @@ from datetime import date
 from signup.models import PotentialUser
 from login.models import CustomUser
 from login.membership_status import member_status_checker
+
+
+def notify_staff_user_is_awaiting_activation(name, id):
+
+    superusers = CustomUser.objects.filter(is_superuser=True)
+
+    try:
+        message = Message(
+            notification=Notification(
+                title="New user awaiting activation!", 
+                body=name + " is awaiting for their account to be activated!", 
+            ),
+        )
+        
+
+        id_list = []
+
+        for user in superusers:
+            id_list.append(user.id)
+
+        devices = FCMDevice.objects.filter(user_id__in=id_list)
+        devices.send_message(message)
+    except:
+        pass
+
+    try:
+
+        link = settings.SITE_URL + "admin/user_account/awaitingactivation/" + str(id) + "/change/"
+        for user in superusers:
+            subject = 'New user awaiting activation'
+            email_from = 'dcgymapp@gmail.com'
+            html_content = render_to_string("user_activation.html", {'name': name, 'id': id, 'link': link})
+            text_content = strip_tags(html_content)
+            body = ''
+            try:
+                email = EmailMultiAlternatives(subject, body, email_from, [user.email])
+                email.attach_alternative(html_content, "text/html")
+                print("emailing " + user.email)
+                email.send()
+            except BadHeaderError:
+                print('Invalid header found.')
+    except:
+        pass
+
+    
+
 
 class signup(APIView):
     permission_classes = [AllowAny]
@@ -104,7 +154,7 @@ class signup(APIView):
     def send_verification_email(self, email_to, token, id, name):
         link = settings.SITE_URL + 'verifyemail/' + str(id) + '/' + str(token)
         subject = 'Activate your account'
-        email_from = 'noreply@compute-it.org.uk'
+        email_from = 'dcgymapp@gmail.com'
         html_content = render_to_string("email_verification_template.html", {'name': name, 'link': link})
         text_content = strip_tags(html_content)
         body = ''
@@ -118,7 +168,6 @@ class signup(APIView):
 
 
     def post(self, request, *args, **kwargs):
-        # print(request.data)
         errors = {'name': [], 'email': [], 'password': []}
         # validate passwords
         errors = self.validate_passwords(errors, request.data)
@@ -135,35 +184,22 @@ class signup(APIView):
         errors = self.validate_email(errors, request.data)
 
         if not errors['email'] and not errors['password'] and not errors['name']:
-            user_is_member = member_status_checker.user_is_active_member(request.data['email'])
+            hashed_password = make_password(request.data['password'], salt=None, hasher='default')
+            verifcation_token = uuid.uuid4()
+            potential_user = PotentialUser.objects.create(
+                first_name=request.data['fName'],
+                last_name=request.data['sName'],
+                email=request.data['email'],
+                password=hashed_password,
+                v_token=verifcation_token,
+                timestamp=date.isoformat(date.today()),
+                locked=False)
 
-            if user_is_member:
-                hashed_password = make_password(request.data['password'], salt=None, hasher='default')
-                verifcation_token = uuid.uuid4()
-                potential_user = PotentialUser.objects.create(
-                    first_name=request.data['fName'],
-                    last_name=request.data['sName'],
-                    email=request.data['email'],
-                    password=hashed_password,
-                    v_token=verifcation_token,
-                    timestamp=date.isoformat(date.today()),
-                    locked=False)
-
-                self.send_verification_email(
-                    request.data['email'],
-                    verifcation_token,
-                    potential_user.id,
-                    (request.data['fName'] + ' ' + request.data['sName']))
-            else:
-                errors['email'].append(
-                "We were unable to link your email to an active gym membership.\n\n"
-                + "Make sure you are using the same email you used to sign up to the gym.\n\n"
-                + "If you just signed up to gym and are a paying member, you may need to wait 5 minutes for this to be verfied by the app.\n\n"
-                + "If you are not already a member of David Corfields Gymnasium press the menu icon in the top right and select Gym Membership.\n\n"
-                + "From there, follow the signup instructions.\n\n"
-                + "If you are still having issues with the signup process when you are a member please get in contact with us so we can resolve this issue.\n\n"
-
-                )
+            self.send_verification_email(
+                request.data['email'],
+                verifcation_token,
+                potential_user.id,
+                (request.data['fName'] + ' ' + request.data['sName']))
         return JsonResponse({
             'errors': errors
         })
@@ -198,7 +234,6 @@ class verifyemail(View):
             new_user.delete()
             return HttpResponse({'This activation token has expired. Please sign up again to renew it.'})
 
-
         user_account = CustomUser.objects.create(
             first_name=new_user.first_name,
             last_name=new_user.last_name,
@@ -206,15 +241,31 @@ class verifyemail(View):
             password=new_user.password,
             is_staff=False
         )
-        # user_account.password = new_user.password
         user_account.save()
 
-        new_user.delete()
         name = user_account.first_name + ' ' + user_account.last_name
+
+        activation_request = AwaitingActivation.objects.create(
+            user=user_account,
+            email=user_account.email,
+            name=name
+        )
+        activation_request.save()
+
+        membership_status = MembershipStatus.objects.create(
+            email=user_account.email,
+            active=False
+        )
+        membership_status.save()
+
+        notify_staff_user_is_awaiting_activation(name, activation_request.id)
+
+        new_user.delete()
         success_page = render_to_string("email_verified.html", {'name': name})
         return HttpResponse(success_page)
 
 
+  
 
 
 

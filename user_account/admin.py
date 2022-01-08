@@ -1,8 +1,5 @@
 from django.contrib import admin
-from .models import MembershipStatus
-from .models import MainJointAccount
-from .models import LinkedAccount
-from .models import PasswordResets
+from .models import MembershipStatus, AwaitingActivation, PasswordResets
 
 # Register your models here.
 @admin.register(PasswordResets)
@@ -17,23 +14,27 @@ class PasswordResetsAdmin(admin.ModelAdmin):
 @admin.register(MembershipStatus)
 class MembershipStatusAdmin(admin.ModelAdmin):
     model = MembershipStatus
-    list_display = ('email', 'active', 'api_type', 'customer_id', 'mandate_id', 'subscription_id')
-    list_filter = (['api_type', 'active', ])
-    search_fields = ('email', 'active', 'api_type', 'customer_id', 'mandate_id', 'subscription_id')
-    change_list_template = 'admin/membership_status/membership_status_upload_members.html'
+    list_display = ('email', 'active', )
+    list_filter = (['active'])
+    search_fields = ('email', 'active' )
+    # change_list_template = 'admin/membership_status/membership_status_upload_members.html'
 
 
 # Register your models here.
-@admin.register(MainJointAccount)
-class MainJointAccountAdmin(admin.ModelAdmin):
-    model = MainJointAccount
-    raw_id_fields = ("main_joint_account",)
+@admin.register(AwaitingActivation)
+class AwaitingActivationAdmin(admin.ModelAdmin):
+    model = AwaitingActivation
+    list_display = ('name', 'user')
+    search_fields = ('name', 'user')
+    change_form_template = 'admin/membership_status/form_view.html'
 
+    def get_osm_info(self):
+        # ...
+        pass
 
-# Register your models here.
-@admin.register(LinkedAccount)
-class LinkedAccountAdmin(admin.ModelAdmin):
-    model = LinkedAccount
-    list_display = ('child_account', 'parent_account', )
-    raw_id_fields = ('parent_account', )
-    raw_id_fields = ("child_account",)
+    def change_view(self, request, object_id, form_url='', extra_context=None):
+        extra_context = extra_context or {}
+        extra_context['osm_data'] = self.get_osm_info()
+        return super().change_view(
+            request, object_id, form_url, extra_context=extra_context,
+        )

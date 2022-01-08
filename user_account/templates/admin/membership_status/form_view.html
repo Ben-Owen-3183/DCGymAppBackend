@@ -1,0 +1,50 @@
+{% extends 'admin/change_form.html' %}
+
+
+{% block content %}
+
+<script>
+    function update(status){
+        window.location.href = '/user_account/awaitingactivation/'.status;
+    }
+</script>
+
+<style>
+    p {
+        font-size: medium;
+    }   
+    p.email {
+        font-weight: bold;
+        font-size: large;
+    }   
+    button.allow {
+        padding-left: 50px;
+        padding-right: 50px;
+        padding-top: 15px;
+        padding-bottom: 15px;
+        margin-right: 30px;
+        background-color: #00AA22;
+    }
+    button.deny {
+        padding-left: 50px;
+        padding-right: 50px;
+        padding-top: 15px;
+        padding-bottom: 15px;
+        background-color: #AA0022;
+    }
+</style>
+
+
+<br><br><br><br>
+<p class="email">{{ original.email}}</p>
+<p>{{ original.name }}  has requested access</p>
+<a href="/user/awaitingactivation/allow/{{ original.pk }}">
+    <button class="button allow" > Allow </button>
+</a>
+<a href="/user/awaitingactivation/deny/{{ original.pk }}">
+    <button class="button deny" > Deny </button>
+</a>
+
+
+
+{% endblock %}
