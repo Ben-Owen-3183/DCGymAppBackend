@@ -1,0 +1,247 @@
+import django.db.models
+from rest_framework.response import Response
+from rest_framework.views import APIView
+from django.views import View
+from rest_framework.permissions import IsAuthenticated, AllowAny
+from login.membership_status import member_status_checker
+import gocardless_pro
+from DCGymAppBackend import settings
+from .models import BankDetailsFlowSession, GCCustomer, GCCustomerSubscription, UserSubscriptionCancelled
+import uuid
+import json
+from django.template.loader import render_to_string
+from django.http import HttpResponse
+from django.shortcuts import render
+import logging
+# Create your views here.
+
+"""
+Request Format
+{
+    data: {...} // request data
+    version: {...} // client version
+    type: { ios/android/web }
+}
+
+response format
+{
+    data: { }
+    success: { true/false }
+    human_errors: []
+    dev_errors: []  
+}
+
+ "account_number": "55779911",
+    "branch_code": "200000",
+
+"""
+client = gocardless_pro.Client(
+    access_token=settings.GC_ACCESS_TOKEN,
+    environment=settings.GC_ENVIRONMENT
+)
+
+
+class Cancel(APIView):
+
+    def get(self, request):
+        try:
+            gc_customer = GCCustomer.objects.get(user=request.user.id)
+            client.subscriptions.cancel(gc_customer.subscription_id)
+
+            UserSubscriptionCancelled.objects.create(
+                user=request.user.id,
+                customer=gc_customer
+            )
+
+            return Response({
+                'data': {},
+                'success': True,
+                'human_errors': [],
+                'dev_errors': []
+            })
+        except Exception as e:
+            return Response({
+                'data': {},
+                'success': False,
+                'human_errors': ['Failed to cancel membership. Please try again or contact support'],
+                'dev_errors': [str(e)]
+            })
+
+
+class Status(APIView):
+
+    def get(self, request):
+        try:
+            data: dict
+            if request.user.is_superuser or request.user.is_staff:
+                data = {
+                    'upcoming_payments': [],
+                    'sign_up_date': 'N/A',
+                    'membership_type': 'staff'
+                }
+            else:
+                try:
+                    gc_customer = GCCustomer.objects.get(user=request.user.id)
+                    subscription = GCCustomerSubscription.objects.get(customer=gc_customer)
+                    data = {
+                        'upcoming_payments': json.loads(subscription.upcoming_payments),
+                        'sign_up_date': subscription.timestamp,
+                        'membership_type': 'online'
+                    }
+                except django.db.models.ObjectDoesNotExist:
+                    data = {
+                        'upcoming_payments': [],
+                        'sign_up_date': 'N/A',
+                        'membership_type': 'physical'
+                    }
+            return Response({
+                'data': data,
+                'success': True,
+                'human_errors': [],
+                'dev_errors': []
+            })
+        except Exception as e:
+            return Response({
+                'data': {},
+                'success': False,
+                'human_errors': ['something went wrong'],
+                'dev_errors': [str(e)]
+            })
+
+
+class Pricing(APIView):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        return Response({
+            'data': {'online_membership_price': '£9.99'},
+            'success': True,
+            'human_errors': [],
+            'dev_errors': []
+        })
+
+
+class BankDetailsForm(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        human_errors = []
+        try:
+            session_token = str(uuid.uuid4())
+
+            response = client.redirect_flows.create(params={
+                "description": "David Corfield Virtual Gym Online Membership",
+                "session_token": session_token,
+                "success_redirect_url": f"{settings.SITE_URL}api/v1/membership/confirm_bank_details",
+                "prefilled_customer": {
+                    "given_name": request.user.first_name,
+                    "family_name": request.user.last_name,
+                    "email": request.user.email
+                }
+            })
+
+            try:
+                flow_session = BankDetailsFlowSession.objects.get(user=request.user)
+                flow_session.redirect_id = response.attributes['id']
+                flow_session.session_token = session_token
+                flow_session.save()
+            except django.db.models.ObjectDoesNotExist as e:
+                BankDetailsFlowSession.objects.create(
+                    user=request.user,
+                    redirect_id=response.attributes['id'],
+                    session_token=session_token,
+                )
+
+            data = {
+                'redirect_url': response.attributes['redirect_url'],
+                'description': response.attributes['description'],
+                'success_redirect': response.attributes['success_redirect_url'],
+            }
+
+            return Response({
+                'data': data,
+                'success': True,
+                'human_errors': [],
+                'dev_errors': []
+            })
+        except Exception as e:
+            if len(human_errors) == 0:
+                human_errors.append('Something went wrong')
+
+            return Response({
+                'data': {},
+                'success': False,
+                'human_errors': human_errors,
+                'dev_errors': [str(e)],
+            })
+
+
+class ConfirmBankDetails(View):
+    permission_classes = [AllowAny]
+
+    def get(self, request):
+        """
+        Creates a customer and starts a subscription
+        """
+        try:
+            if 'redirect_flow_id' not in request.GET:
+                raise Exception('no redirect flow id in request')
+
+            flow_session = BankDetailsFlowSession.objects.get(
+                redirect_id=request.GET['redirect_flow_id'],
+            )
+
+            response = client.redirect_flows.complete(
+                flow_session.redirect_id,
+                params={"session_token": flow_session.session_token}
+            )
+
+            mandate_id = response.attributes['links']['mandate']
+            customer_id = response.attributes['links']['customer']
+            user = flow_session.user
+            flow_session.delete()
+
+            gc_customer = None
+            try:
+                gc_customer = GCCustomer.objects.get(user=user.id)
+                if GCCustomerSubscription.objects.filter(customer=gc_customer).exists():
+                    raise Exception('Customer already has subscription')
+                gc_customer.mandate_id = mandate_id
+                gc_customer.customer_id = customer_id
+                gc_customer.subscription_id = ''
+                gc_customer.save()
+            except django.db.models.ObjectDoesNotExist as e:
+                gc_customer = GCCustomer.objects.create(
+                    user=user,
+                    mandate_id=mandate_id,
+                    customer_id=customer_id,
+                )
+
+            subscription = client.subscriptions.create(params={
+                "amount": "999",
+                "currency": "GBP",
+                "name": "David Corfield Online Gym Membership",
+                "interval_unit": "monthly",
+                'interval': '1',
+                "links": {
+                    "mandate": gc_customer.mandate_id
+                }
+            })
+
+            gc_customer.subscription_id = subscription.id
+            gc_customer.save()
+
+            GCCustomerSubscription.objects.create(
+                customer=gc_customer,
+                amount=subscription.amount,
+                upcoming_payments=json.dumps(subscription.upcoming_payments),
+                status=subscription.status
+            )
+
+            data = {}
+            success_page = render_to_string("confirm_subscription.html", data)
+            return HttpResponse(success_page)
+
+        except Exception as e:
+            logging.exception(e)
+            return HttpResponse('Something went wrong. please try again')

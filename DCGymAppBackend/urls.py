@@ -19,6 +19,9 @@ from django.conf import settings
 from django.conf.urls.static import static
 
 urlpatterns = [
+    path('api/v1/membership/', include('membership.urls')),
+    # path('api/v1/auth/', include('auth.urls')),
+
     path('admin/', admin.site.urls),
     path('auth/', include('login.urls')),
     path('', include('signup.urls')),

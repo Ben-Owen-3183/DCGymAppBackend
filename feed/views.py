@@ -199,7 +199,6 @@ class NewPost(APIView):
                 return True
         return False
 
-
     def store_post_image(self, request):
         content_type = request.FILES['image'].content_type
         file_extension = content_type.split('/')[1]
@@ -211,7 +210,6 @@ class NewPost(APIView):
         fs = FileSystemStorage('media/post_images')
         # fs.delete(file_name)
         return fs.save(file_name, request.FILES['image'])
-
 
     def get_thumbnail(self, video_id):
         v = vimeo.VimeoClient(

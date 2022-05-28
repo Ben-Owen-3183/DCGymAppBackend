@@ -1,4 +1,5 @@
 from rest_framework.views import APIView
+from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from user_account.models import UserAvatar, PasswordResets, MembershipStatus, AwaitingActivation
@@ -118,10 +119,10 @@ class ConfirmPassReset(View):
     """
     def send_email(self, email_to, name, password):
         subject = 'New Password'
-        email_from = 'noreply@compute-it.org.uk'
-        html_content = """
-            <p>Hello """ + name + """,</p>
-            <p>Your password has been reset to """ + password + """"</p>
+        email_from = 'dcgymapp@gmail.com'
+        html_content = f"""
+            <p>Hello {name},</p>
+            <p>Your password has been reset to {password}</p>
             <p>After you login with your new password press the menu icon in the top right to
             open the app menu. From there press "settings" and choose "change password".
             You will then be able to set a new memorable password. You will need this generated password
@@ -152,7 +153,7 @@ class ConfirmPassReset(View):
         diff = (current_date - password_reset.timestamp).days
         if diff > 7:
             password_reset.delete()
-            return HttpResponse({'This password reset token has expired. Please make a new requesto reset password'})
+            return HttpResponse({'This password reset token has expired. Please make a new request to reset password'})
 
         user_account = None
         try:
@@ -188,7 +189,7 @@ class PassReset(APIView):
     def send_verification_email(self, email_to, token, id, name):
         link = settings.SITE_URL + 'user/password/reset/' + str(id) + '/' + str(token)
         subject = 'Reset Password'
-        email_from = 'noreply@compute-it.org.uk'
+        email_from = 'dcgymapp@gmail.com'
         html_content = """
             <p>Hello """ + name + """,</p>
             <p>A password reset has been requested for this account</p>
